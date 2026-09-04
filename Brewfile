@@ -39,12 +39,11 @@ brew "postgresql@14"
 brew "postgresql@15"
 brew "postgresql@16"
 
-# ---------- Mobile / React Native ----------
+# ---------- Mobile / React Native (iOS) ----------
 brew "watchman"
 brew "cocoapods"
-cask "temurin@17"           # JDK 17 for Android builds (replaces the Intel-only adoptopenjdk8)
 cask "react-native-debugger"
-# cask "android-studio"
+cask "temurin@17"           # JDK 17 for Java-based tooling (no Android SDK: I no longer build for Android)
 
 # ---------- Cloud & infra ----------
 brew "awscli"
