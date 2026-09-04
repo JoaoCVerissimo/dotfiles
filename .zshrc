@@ -11,8 +11,17 @@ source "$ZSH/oh-my-zsh.sh"
 export PATH="$HOME/.local/bin:$PATH"                     # claude, poetry, pipx, uv, ...
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 
-# Go (official installer lives in /usr/local/go; Homebrew's go is already on PATH)
-[[ -d /usr/local/go/bin ]] && export PATH="$PATH:/usr/local/go/bin"
+# Go: newest toolchain under ~/sdk (golang.org/dl wrappers) wins; otherwise the official installer in /usr/local/go.
+# Do not export GOROOT elsewhere: a stale GOROOT makes `go` fail with "compile: version ... does not match go tool version".
+_go_sdk="$(ls -d "$HOME"/sdk/go[0-9]* 2>/dev/null | sort -V | tail -1)"
+if [[ -n "$_go_sdk" ]]; then
+  export GOROOT="$_go_sdk"
+  export PATH="$GOROOT/bin:$PATH"
+elif [[ -d /usr/local/go/bin ]]; then
+  unset GOROOT
+  export PATH="$PATH:/usr/local/go/bin"
+fi
+unset _go_sdk
 [[ -d "$HOME/go/bin" ]] && export PATH="$PATH:$HOME/go/bin"
 
 # Postgres client/server binaries, resolved through the active Homebrew prefix

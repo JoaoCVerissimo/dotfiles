@@ -28,7 +28,7 @@ brew "pyenv"
 brew "rbenv"
 brew "ruby-build"
 brew "rustup"               # then: rustup default stable
-brew "go"
+# Go is not installed via Homebrew: use the official pkg from go.dev (lands in /usr/local/go) or golang.org/dl wrappers into ~/sdk
 
 # ---------- Databases ----------
 brew "postgresql@17"
