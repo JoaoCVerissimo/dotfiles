@@ -10,6 +10,9 @@ source "$ZSH/oh-my-zsh.sh"
 # ---------- PATH ----------
 export PATH="$HOME/.local/bin:$PATH"                     # claude, poetry, pipx, uv, ...
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+# Rust: rustup from Homebrew keeps its proxies (rustc, cargo, ...) in its own bin; ~/.cargo/bin holds `cargo install`ed tools
+[[ -n "$HOMEBREW_PREFIX" && -d "$HOMEBREW_PREFIX/opt/rustup/bin" ]] && export PATH="$HOMEBREW_PREFIX/opt/rustup/bin:$PATH"
+[[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
 
 # Go: newest toolchain under ~/sdk (golang.org/dl wrappers) wins; otherwise the official installer in /usr/local/go.
 # Do not export GOROOT elsewhere: a stale GOROOT makes `go` fail with "compile: version ... does not match go tool version".
