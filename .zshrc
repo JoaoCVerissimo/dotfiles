@@ -55,8 +55,8 @@ command -v rbenv >/dev/null && eval "$(rbenv init - zsh)"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 [[ -d "$ANDROID_HOME" ]] && export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"   # appended: platform-tools ships its own sqlite3
-# JDK for Android builds (Temurin 17 from the Brewfile). Uncomment once installed:
-# export JAVA_HOME="$(/usr/libexec/java_home -v 17 2>/dev/null)"
+# JDK for Android builds (Temurin 17 from the Brewfile)
+_jh="$(/usr/libexec/java_home -v 17 2>/dev/null)" && export JAVA_HOME="$_jh"; unset _jh
 
 # ---------- Tool hooks & completions ----------
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"
