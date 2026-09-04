@@ -24,6 +24,7 @@ brew "yt-dlp"
 # ---------- Languages & version managers ----------
 brew "nvm"
 brew "pyenv"
+brew "tcl-tk@8"             # pyenv needs Tk 8 to build Python < 3.13 (Tk 9 breaks _tkinter)
 brew "rbenv"
 brew "ruby-build"
 brew "rustup"               # then: rustup default stable

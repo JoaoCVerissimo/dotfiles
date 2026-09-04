@@ -46,6 +46,9 @@ pyenv global "$(pyenv versions --bare | grep "^$PYTHON_SERIES" | tail -1)"
 
 step "Ruby ($RUBY_SERIES via rbenv)"
 eval "$(rbenv init - bash)"
+# Xcode 26's clang errors on a pattern in the headers of Ruby < 3.4, which silently drops the socket extension.
+export RUBY_CFLAGS="-Wno-default-const-init-unsafe"
+export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@3)"
 RUBY_LATEST="$(rbenv install --list 2>/dev/null | grep -E "^$RUBY_SERIES\.[0-9]+$" | tail -1)"
 rbenv install --skip-existing "$RUBY_LATEST" && rbenv global "$RUBY_LATEST"
 
