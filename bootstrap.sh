@@ -21,7 +21,7 @@ fi
 if [[ -x /opt/homebrew/bin/brew ]]; then eval "$(/opt/homebrew/bin/brew shellenv)"; else eval "$(/usr/local/bin/brew shellenv)"; fi
 
 step "Trusting third-party taps (Homebrew 6)"
-brew trust hashicorp/tap heroku/brew jondot/tap stripe/stripe-cli supabase/tap 2>/dev/null || true
+brew trust hashicorp/tap heroku/brew stripe/stripe-cli supabase/tap 2>/dev/null || true
 
 step "brew bundle"
 brew bundle --file="$DOTFILES/Brewfile"
@@ -37,7 +37,7 @@ export NVM_DIR="$HOME/.nvm"; mkdir -p "$NVM_DIR"
 # shellcheck disable=SC1091
 source "$(brew --prefix nvm)/nvm.sh"
 nvm install "$NODE_VERSION" && nvm alias default "$NODE_VERSION"
-npm install -g pnpm
+npm install -g pnpm hygen
 
 step "Python ($PYTHON_SERIES via pyenv)"
 export PYENV_ROOT="$HOME/.pyenv"; eval "$(pyenv init - bash)"

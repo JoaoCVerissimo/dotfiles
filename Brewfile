@@ -1,11 +1,10 @@
 # Brewfile — everything `brew bundle` should install on a new Mac.
 # Curated by hand (not a raw `brew bundle dump`) so leftovers and build deps stay out.
-# Homebrew 6 requires trusting third-party taps once:  brew trust hashicorp/tap heroku/brew jondot/tap stripe/stripe-cli supabase/tap
+# Homebrew 6 requires trusting third-party taps once:  brew trust hashicorp/tap heroku/brew stripe/stripe-cli supabase/tap
 
 # ---------- Taps ----------
 tap "hashicorp/tap"
 tap "heroku/brew"
-tap "jondot/tap"            # hygen
 tap "stripe/stripe-cli"
 tap "supabase/tap"
 
@@ -53,7 +52,7 @@ brew "hashicorp/tap/terraform"
 brew "heroku/brew/heroku"
 brew "stripe/stripe-cli/stripe"
 brew "supabase/tap/supabase"
-brew "jondot/tap/hygen"
+# hygen (code generator) is installed with npm in bootstrap.sh: the jondot tap only ships an Intel binary
 brew "openvpn"
 cask "ngrok"
 
