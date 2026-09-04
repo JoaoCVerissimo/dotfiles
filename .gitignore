@@ -1,0 +1,8 @@
+# Repo hygiene: nothing machine-local or secret gets committed.
+.DS_Store
+*.local
+*.local.json
+.zshrc.local
+.gitconfig.local
+.claude/settings.local.json
+.dotfiles-backup/

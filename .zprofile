@@ -1,0 +1,8 @@
+# ~/.zprofile — login-shell setup. Keep it tiny; everything else lives in ~/.zshrc.
+
+# Homebrew: Apple Silicon prefix first, Intel prefix as a fallback.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi

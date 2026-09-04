@@ -1,0 +1,3 @@
+# Copy to ~/.zshrc.local (gitignored). Put tokens and machine-specific exports here.
+# export OPENAI_API_KEY="..."
+# export AWS_PROFILE="work"

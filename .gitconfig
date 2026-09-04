@@ -1,0 +1,23 @@
+[init]
+	defaultBranch = main
+[core]
+	excludesfile = ~/.gitignore_global
+	ignorecase = false
+[pull]
+	rebase = false
+[push]
+	autoSetupRemote = true
+[fetch]
+	prune = true
+[alias]
+	count-lines = "! git log --author=\"$1\" --pretty=tformat: --numstat | awk '{ add += $1; subs += $2; loc += $1 - $2 } END { printf \"added lines: %s, removed lines: %s, total lines: %s\\n\", add, subs, loc }' #"
+[credential "https://github.com"]
+	helper = 
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !gh auth git-credential
+# Identity (user.name / user.email) and per-machine overrides live in ~/.gitconfig.local,
+# which install.sh creates and git never commits.
+[include]
+	path = ~/.gitconfig.local

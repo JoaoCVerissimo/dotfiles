@@ -1,0 +1,34 @@
+// Place your key bindings in this file to override the defaultsauto[]
+[
+  {
+    "key": "[IntlBackslash]",
+    "command": "github.copilot.generate",
+    "when": "editorTextFocus && github.copilot.activated && !inInteractiveInput && !interactiveEditorFocused"
+  },
+  {
+    "key": "ctrl+enter",
+    "command": "-github.copilot.generate",
+    "when": "editorTextFocus && github.copilot.activated && !inInteractiveInput && !interactiveEditorFocused"
+  },
+  {
+    "key": "right",
+    "command": "-notebook.unfold",
+    "when": "notebookEditorFocused && !inputFocus && activeEditor == 'workbench.editor.notebook'"
+  },
+  {
+    "key": "alt+2",
+    "command": "github.copilot.nextPanelSolution"
+  },
+  {
+    "key": "alt+1",
+    "command": "github.copilot.previousPanelSolution"
+  },
+  {
+    "key": "alt+3",
+    "command": "codium.right_click_code_suggestion"
+  },
+  {
+    "key": "alt+4",
+    "command": "github.copilot.interactiveEditor.generate"
+  }
+]
