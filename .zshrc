@@ -61,9 +61,6 @@ if command -v terraform >/dev/null; then
   complete -o nospace -C "$(command -v terraform)" terraform
 fi
 
-# Legacy: pins the Docker API for the old Docker Desktop 4.6. Remove after updating Docker Desktop.
-export DOCKER_API_VERSION=1.41
-
 # ---------- Aliases ----------
 alias zesh='code ~/.zshrc'
 alias reload='source ~/.zshrc'
