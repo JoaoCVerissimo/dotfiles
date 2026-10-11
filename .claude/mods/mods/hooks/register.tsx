@@ -16,7 +16,7 @@ import type { ConfigRow, EngineInterface, PluginOptions, Register } from 'claude
 
 import type { ModsRow, ModsSessionRow, ModsTab } from '../types'
 import type { External, Feature } from './lib/catalog'
-import { EXTERNAL, FEATURES, afterTurn, alwaysOf, baseName, effortNamed, isOnHere, parseAsk, savedEffort, took } from './lib/catalog'
+import { EXTERNAL, FEATURES, afterTurn, alsoSaves, alwaysOf, baseName, effortNamed, isOnHere, parseAsk, pickedModel, savedEffort, took } from './lib/catalog'
 import type { PanelActions } from './lib/panel'
 import { drawChips, drawPanel } from './lib/panel'
 import type { Past } from './lib/sessions'
@@ -30,7 +30,8 @@ const PAST_SHOWN = 8
 const switches = atom({ plugin: 'mods', key: 'switches' } as const, {})
 const view = atom({ plugin: 'mods', key: 'view' } as const, { tab: 'mods', detail: null })
 const turn = atom({ plugin: 'mods', key: 'turn' } as const, null)
-const live = atom({ plugin: 'mods', key: 'live' } as const, { model: '', effort: '', ran: '', saved: '' })
+const live = atom({ plugin: 'mods', key: 'live' } as const, { model: '', effort: '', ran: '', saved: '', savedModel: '' })
+const asking = atom({ plugin: 'mods', key: 'asking' } as const, null)
 const rows = atom({ plugin: 'mods', key: 'rows' } as const, [])
 const plugins = atom({ plugin: 'mods', key: 'plugins' } as const, {})
 const roster = atom({ plugin: 'mods', key: 'roster' } as const, { at: 0, rows: [], error: '' })
@@ -68,7 +69,10 @@ function brief(error: unknown): string {
   return String(error instanceof Error ? error.message : error).replace(/\s+/g, ' ').slice(0, 200)
 }
 
+// The panel's one line of news. Whatever it reports, a pick that was waiting
+// for its second click waits no longer.
 async function say($: EngineInterface, text: string): Promise<void> {
+  await update($, asking, () => null)
   await update($, note, () => text)
 }
 
@@ -107,6 +111,8 @@ async function refresh($: EngineInterface): Promise<void> {
   // it stays through /model and /clear: the panel follows the same.
   const model = await $.session.model().catch(() => '')
   const saved = savedEffort(settings, model)
+  const row = kept.find(one => one.key === 'model')
+  const savedModel = row === undefined ? '' : pickedModel({ ...row, value: typeof settings.model === 'string' ? settings.model : 'default' })
   const start = known !== '' ? known : saved
   const now = await update($, live, old => ({
     model,
@@ -114,6 +120,7 @@ async function refresh($: EngineInterface): Promise<void> {
     // a reload hands back what the panel kept before it, which may lack a field
     ran: old.model === model ? (old.ran ?? '') : '',
     saved,
+    savedModel,
   }))
   known = now.effort
 }
@@ -294,6 +301,21 @@ function runCommand($: EngineInterface, command: string, args: string): void {
     .catch(error => say($, `/${command}: ${brief(error)}`))
 }
 
+// A model or an effort picked in the Control tab. One that would also change
+// what new sessions start with is put as a question under its row first, and
+// run when the same pick is clicked again while the question shows.
+async function pick($: EngineInterface, kind: 'model' | 'effort', option: string): Promise<void> {
+  const waiting = await read($, asking)
+  const text = waiting?.kind === kind && waiting.option === option ? '' : alsoSaves(kind, option, await read($, live))
+  if (text !== '') {
+    await say($, '')
+    await update($, asking, () => ({ kind, option, text }))
+
+    return
+  }
+  runCommand($, kind, option)
+}
+
 async function stopTurn($: EngineInterface): Promise<string> {
   const current = await read($, turn)
   if (current === null) {
@@ -369,6 +391,7 @@ function actionsOf($: EngineInterface): PanelActions {
       void setRow($, row.key, typed).then(refusal => say($, refusal))
     },
     run: (command, args) => runCommand($, command, args ?? ''),
+    pick: (kind, option) => void pick($, kind, option),
     stop: () => void stopTurn($).then(text => say($, text)),
     openSession: row => void openSession($, row),
     archive: row => void toggleArchived($, row),
@@ -548,6 +571,7 @@ export const register: Register = (on, options) => {
         rows: await read($, rows),
         plugins: await read($, plugins),
         live: await read($, live),
+        asking: await read($, asking),
         turn: await read($, turn),
         roster: await read($, roster),
         prefs: await read($, prefs),

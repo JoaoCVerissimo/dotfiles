@@ -1,6 +1,7 @@
 import type { Elements, RenderElement } from 'claude-code'
 
 import type {
+  ModsAsking,
   ModsLive,
   ModsPrefs,
   ModsRoster,
@@ -27,6 +28,7 @@ import {
   pickedModel,
   rowOf,
   savedLine,
+  savedModelLine,
   settingsOf,
 } from './catalog'
 
@@ -40,6 +42,7 @@ export type PanelData = {
   rows: readonly ModsRow[]
   plugins: Readonly<Record<string, boolean>>
   live: ModsLive
+  asking: ModsAsking
   turn: ModsTurn
   roster: ModsRoster
   prefs: ModsPrefs
@@ -57,6 +60,7 @@ export type PanelActions = {
   external: (external: External) => void
   setRow: (row: ModsRow, value: boolean | string) => void
   run: (command: string, args?: string) => void
+  pick: (kind: 'model' | 'effort', option: string) => void
   stop: () => void
   openSession: (row: ModsSessionRow) => void
   archive: (row: ModsSessionRow) => void
@@ -307,6 +311,21 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
   const onModel = pickedModel(model)
   const chips = rowOf(data.rows, 'mods.chips')
   const isWorking = data.turn !== null
+  // Under a row: the question a pick there is waiting on, else what new sessions start with.
+  // It sits below the buttons, so the one to click again stays where it was.
+  const under = (kind: 'model' | 'effort', line: string): RenderElement => (
+    <Box paddingLeft={1}>
+      {data.asking?.kind === kind ? (
+        <Text color="warning" wrap="wrap">
+          {data.asking.text}
+        </Text>
+      ) : (
+        <Text dimColor wrap="wrap">
+          {line}
+        </Text>
+      )}
+    </Box>
+  )
   const pick = (label: string, isPicked: boolean, key: string, onPress: () => void): RenderElement => (
     <Button key={key} plain onPress={onPress}>
       {dot(t, isPicked)} {label}
@@ -323,21 +342,18 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
       {model !== undefined && (
         <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
           {model.options.map(option =>
-            pick(option, onModel === option, `model:${option}`, () => act.run('model', option)),
+            pick(option, onModel === option, `model:${option}`, () => act.pick('model', option)),
           )}
         </Box>
       )}
+      {model !== undefined && under('model', savedModelLine(data.live))}
       {heading(t, 'Effort', effortLine(data.live))}
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
         {EFFORTS.map(level =>
-          pick(level, data.live.effort === level, `effort:${level}`, () => act.run('effort', level)),
+          pick(level, data.live.effort === level, `effort:${level}`, () => act.pick('effort', level)),
         )}
       </Box>
-      <Box paddingLeft={1}>
-        <Text dimColor wrap="wrap">
-          {savedLine(data.live)}
-        </Text>
-      </Box>
+      {under('effort', savedLine(data.live))}
       {heading(t, 'Turn', isWorking ? 'working' : 'idle')}
       <Box paddingLeft={1}>
         <Button key="stop" plain dimColor={!isWorking} onPress={() => act.stop()}>

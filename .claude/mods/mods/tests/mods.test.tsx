@@ -2,7 +2,7 @@ import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { MockClock } from 'claude-code/testing'
 
-import { FEATURES, afterTurn, effortLine, effortNamed, parseAsk, pickedModel, savedEffort, settingsOf } from '../hooks/lib/catalog'
+import { FEATURES, afterTurn, alsoSaves, effortLine, effortNamed, parseAsk, pickedModel, savedEffort, settingsOf } from '../hooks/lib/catalog'
 import { buildRoster, openingOf, parseTitles, parseTtys, projectFolder } from '../hooks/lib/sessions'
 
 const PANE = {
@@ -23,8 +23,9 @@ const ROWS = [
 ] as const
 
 // What the engine holds of a session: the model /model's row says is picked, the id that
-// comes to, and the effort settings keep for each model. A test moves it as the commands do.
-type Session = { picked: string; model: string; saved: Record<string, { effortLevel?: string }> }
+// comes to, the effort settings keep for each model, and the model they name for new
+// sessions (none: the default). A test moves it as the commands do.
+type Session = { picked: string; model: string; saved: Record<string, { effortLevel?: string }>; named?: string }
 
 function session(): Session {
   return { picked: 'Default (recommended)', model: 'claude-opus-5-5', saved: { 'claude-opus-5-5': { effortLevel: 'xhigh' } } }
@@ -40,7 +41,7 @@ function world(on: On, { ran = [], printed = () => '', held = session() }: World
   on('session.start', () => ({ cwd: '/work/app' }))
   on('command.register', () => ({ value: { command: 'mods' } }))
   on('config.list', () => ({ value: ROWS.map(row => (row.key === 'model' ? { ...row, value: held.picked } : { ...row })) }))
-  on('settings.read', () => ({ value: { enabledPlugins: { 'next-steps@claude-community': true }, modelSettings: held.saved } }))
+  on('settings.read', () => ({ value: { enabledPlugins: { 'next-steps@claude-community': true }, modelSettings: held.saved, model: held.named } }))
   on('session.model', () => ({ value: held.model }))
   on('session.id', () => ({ value: 'self-session' }))
   on('session.cwd', () => ({ value: '/work/app' }))
@@ -133,10 +134,11 @@ test('the control tab runs the model command and stops the running turn', async 
   await $.turn.start({ text: 'do it', turnId: 'turn-1' })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'tab:control' })
-  await ui.press({ key: 'model:haiku' })
+  // The model new sessions start on runs at the first click.
+  await ui.press({ key: 'model:default' })
   await ui.press({ key: 'stop' })
 
-  expect(commands).toEqual(['/model haiku'])
+  expect(commands).toEqual(['/model default'])
   expect(aborted).toEqual(['turn-1'])
   // The permission mode is not the panel's to set, so the tab has nothing about it.
   expect((await ui.findAll({ type: 'Text' })).filter(text => text.text === 'Mode')).toEqual([])
@@ -147,15 +149,18 @@ test('the control tab runs the model command and stops the running turn', async 
 test('the control tab marks the model and the effort the session is on, and a click moves the mark', async ($, on) => {
   const held = session()
   const clock = world(on, { held })
-  // The engine's /model and /effort as a plugin's run gets them: for this session, settings untouched.
+  // The engine's /model as a live session runs it: the pick is also saved for new sessions.
   on('command.run', { command: 'model' }, ($, e) => {
     held.picked = e.args === 'default' ? 'Default (recommended)' : e.args
     held.model = e.args === 'haiku' ? 'claude-haiku-5-5' : 'claude-opus-5-5'
+    held.named = e.args === 'default' ? undefined : e.args
 
-    return { text: `Set model to ${e.args} for this session only` }
+    return { text: `Set model to ${e.args} and saved as your default for new sessions` }
   })
   // It saves a level as the default for new sessions, all but max.
+  const ran: string[] = []
   on('command.run', { command: 'effort' }, ($, e) => {
+    ran.push(`/effort ${e.args}`)
     if (e.args !== 'max') {
       held.saved = { ...held.saved, [held.model]: { effortLevel: e.args } }
     }
@@ -175,20 +180,47 @@ test('the control tab marks the model and the effort the session is on, and a cl
 
   expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at xhigh' })).toBeDefined()
 
-  // A click on a level also makes it the default for new sessions; one on max leaves that default alone, and the tab shows both.
+  expect(await ui.find({ type: 'Text', text: 'new sessions start on the default model' })).toBeDefined()
+
+  // A level would also become the default for new sessions, so the first click only asks.
   await ui.press({ key: 'effort:low' })
   await clock.settle()
+  expect(ran).toEqual([])
+  expect(await marked('effort')).toEqual(['effort:xhigh'])
+  expect(await ui.find({ type: 'Text', text: 'low would also become the effort new sessions on this model start at (now xhigh)' })).toBeDefined()
+  // The same click again goes ahead, and the tab shows what new sessions now start at.
+  await ui.press({ key: 'effort:low' })
+  await clock.settle()
+  expect(ran).toEqual(['/effort low'])
   expect(await marked('effort')).toEqual(['effort:low'])
   expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at low' })).toBeDefined()
+
+  // Max stays in the session, so it needs no second click and leaves that default alone.
   await ui.press({ key: 'effort:max' })
   await clock.settle()
+  expect(ran).toEqual(['/effort low', '/effort max'])
   expect(await marked('effort')).toEqual(['effort:max'])
   expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at low' })).toBeDefined()
 
-  // The effort stays through a change of model, as the engine keeps it.
+  // A question that was left for another control is not answered by a later click.
+  await ui.press({ key: 'effort:high' })
+  await clock.settle()
+  await ui.press({ key: 'tab:mods' })
+  await ui.press({ key: 'tab:control' })
+  await ui.press({ key: 'effort:high' })
+  await clock.settle()
+  expect(ran).toEqual(['/effort low', '/effort max'])
+  await ui.press({ key: 'tab:control' })
+
+  // A model is saved the same way; the effort stays through the change, as the engine keeps it.
+  await ui.press({ key: 'model:haiku' })
+  await clock.settle()
+  expect(await marked('model')).toEqual(['model:default'])
+  expect(await ui.find({ type: 'Text', text: 'haiku would also become the model new sessions start on' })).toBeDefined()
   await ui.press({ key: 'model:haiku' })
   await clock.settle()
   expect(await marked('model')).toEqual(['model:haiku'])
+  expect(await ui.find({ type: 'Text', text: 'new sessions start on haiku' })).toBeDefined()
   expect(await marked('effort')).toEqual(['effort:max'])
   expect(await ui.find({ type: 'Text', text: 'claude-haiku-5-5' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at its own default' })).toBeDefined()
@@ -394,13 +426,22 @@ test('the effort is read from settings, from an /effort run and from a turn', ()
   expect(effortNamed('', 'Cancelled')).toBe('')
   expect(effortNamed('', '')).toBe('')
 
-  const live = { model: 'claude-opus-5-5', effort: 'max', ran: '', saved: 'xhigh' }
+  const live = { model: 'claude-opus-5-5', effort: 'max', ran: '', saved: 'xhigh', savedModel: 'default' }
   expect(afterTurn(live, 'max')).toEqual({ ...live, ran: 'max' })
   expect(afterTurn(live, 'high').effort).toBe('high')
   expect(afterTurn({ ...live, effort: 'auto' }, 'high')).toEqual({ ...live, effort: 'auto', ran: 'high' })
   expect(effortLine({ ...live, ran: 'max' })).toBe('max')
   expect(effortLine({ ...live, effort: 'auto', ran: 'high' })).toBe('auto · last turn ran at high')
   expect(effortLine(live)).toBe('max')
+
+  // What a pick would also save: nothing for max, for the level already saved, or for the model new sessions start on.
+  expect(alsoSaves('effort', 'max', live)).toBe('')
+  expect(alsoSaves('effort', 'xhigh', live)).toBe('')
+  expect(alsoSaves('effort', 'high', live)).toContain('high would also become the effort new sessions on this model start at (now xhigh)')
+  expect(alsoSaves('effort', 'auto', live)).toContain('auto would also clear the effort new sessions on this model start at (now xhigh)')
+  expect(alsoSaves('effort', 'auto', { ...live, saved: 'auto' })).toBe('')
+  expect(alsoSaves('model', 'default', live)).toBe('')
+  expect(alsoSaves('model', 'sonnet', live)).toContain('sonnet would also become the model new sessions start on')
 })
 
 test('the roster lists live sessions first and knows how each one opens', () => {

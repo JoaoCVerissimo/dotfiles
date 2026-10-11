@@ -208,6 +208,30 @@ export function savedLine(live: ModsLive): string {
   return `new sessions on this model start at ${live.saved === 'auto' ? 'its own default' : live.saved}`
 }
 
+export function savedModelLine(live: ModsLive): string {
+  return `new sessions start on ${live.savedModel === 'default' ? 'the default model' : live.savedModel === '' ? 'another model' : live.savedModel}`
+}
+
+// What a pick in the Control tab would also change for new sessions, as the
+// question put before it is run: Claude Code saves a model picked with /model,
+// and an effort picked with /effort (all but max), as the default, and offers
+// a mod no way to change the session alone. '' when the pick changes none.
+export function alsoSaves(kind: 'model' | 'effort', option: string, live: ModsLive): string {
+  if (kind === 'model') {
+    return option === live.savedModel
+      ? ''
+      : `${option} would also become the model new sessions start on: Claude Code saves a model picked this way. Click ${option} again to go ahead.`
+  }
+  if (option === 'max' || option === live.saved) {
+    return ''
+  }
+  const now = live.saved === 'auto' ? 'none is saved now' : `now ${live.saved}`
+
+  return option === 'auto'
+    ? `auto would also clear the effort new sessions on this model start at (${now}). Click auto again to go ahead.`
+    : `${option} would also become the effort new sessions on this model start at (${now}): Claude Code saves every level but max. Click ${option} again to go ahead.`
+}
+
 export function rowOf(rows: readonly ModsRow[], key: string): ModsRow | undefined {
   return rows.find(row => row.key === key)
 }

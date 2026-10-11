@@ -12,8 +12,12 @@ export type ModsTurn = { id: string; startedAt: number } | null
 
 // What the Control tab shows of the session: its model, the effort it is set
 // to (a level, or auto), the level its last turn ran at ('' before one), and
-// the effort settings keep for the model, which a new session starts at.
-export type ModsLive = { model: string; effort: string; ran: string; saved: string }
+// what a new session starts with: the effort settings keep for the model and,
+// as one of /model's options, the model they name ('' when it is none of them).
+export type ModsLive = { model: string; effort: string; ran: string; saved: string; savedModel: string }
+
+// A pick in the Control tab that waits for a second click, and the question it put.
+export type ModsAsking = { kind: 'model' | 'effort'; option: string; text: string } | null
 
 export type ModsRow = {
   key: string
@@ -52,6 +56,7 @@ declare module 'claude-code' {
       view: ModsView
       turn: ModsTurn
       live: ModsLive
+      asking: ModsAsking
       rows: ModsRow[]
       plugins: Record<string, boolean>
       roster: ModsRoster
