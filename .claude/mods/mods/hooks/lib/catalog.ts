@@ -202,6 +202,12 @@ export function effortLine(live: ModsLive): string {
   return live.ran === '' || live.ran === live.effort ? live.effort : `${live.effort} · last turn ran at ${live.ran}`
 }
 
+// What a new session starts at. Claude Code saves an effort picked with
+// /effort as that default, all but max, so the two can part ways unnoticed.
+export function savedLine(live: ModsLive): string {
+  return `new sessions on this model start at ${live.saved === 'auto' ? 'its own default' : live.saved}`
+}
+
 export function rowOf(rows: readonly ModsRow[], key: string): ModsRow | undefined {
   return rows.find(row => row.key === key)
 }

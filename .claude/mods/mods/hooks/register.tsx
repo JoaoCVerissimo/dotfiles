@@ -30,7 +30,7 @@ const PAST_SHOWN = 8
 const switches = atom({ plugin: 'mods', key: 'switches' } as const, {})
 const view = atom({ plugin: 'mods', key: 'view' } as const, { tab: 'mods', detail: null })
 const turn = atom({ plugin: 'mods', key: 'turn' } as const, null)
-const live = atom({ plugin: 'mods', key: 'live' } as const, { model: '', effort: '', ran: '' })
+const live = atom({ plugin: 'mods', key: 'live' } as const, { model: '', effort: '', ran: '', saved: '' })
 const rows = atom({ plugin: 'mods', key: 'rows' } as const, [])
 const plugins = atom({ plugin: 'mods', key: 'plugins' } as const, {})
 const roster = atom({ plugin: 'mods', key: 'roster' } as const, { at: 0, rows: [], error: '' })
@@ -106,12 +106,14 @@ async function refresh($: EngineInterface): Promise<void> {
   // starts at the level settings keep for its model, /effort changes it, and
   // it stays through /model and /clear: the panel follows the same.
   const model = await $.session.model().catch(() => '')
-  const start = known !== '' ? known : savedEffort(settings, model)
+  const saved = savedEffort(settings, model)
+  const start = known !== '' ? known : saved
   const now = await update($, live, old => ({
     model,
     effort: old.effort !== '' ? old.effort : start,
     // a reload hands back what the panel kept before it, which may lack a field
     ran: old.model === model ? (old.ran ?? '') : '',
+    saved,
   }))
   known = now.effort
 }
@@ -496,6 +498,8 @@ export const register: Register = (on, options) => {
     if (named !== '' || level !== before) {
       await setEffort($, level).catch(() => undefined)
     }
+    // the level settings keep may have changed with it
+    await refresh($).catch(() => undefined)
 
     return result
   })

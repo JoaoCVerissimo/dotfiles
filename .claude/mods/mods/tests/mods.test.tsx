@@ -154,7 +154,14 @@ test('the control tab marks the model and the effort the session is on, and a cl
 
     return { text: `Set model to ${e.args} for this session only` }
   })
-  on('command.run', { command: 'effort' }, ($, e) => ({ text: `Set effort level to ${e.args} (this session only): as asked` }))
+  // It saves a level as the default for new sessions, all but max.
+  on('command.run', { command: 'effort' }, ($, e) => {
+    if (e.args !== 'max') {
+      held.saved = { ...held.saved, [held.model]: { effortLevel: e.args } }
+    }
+
+    return { text: `Set effort level to ${e.args} (${e.args === 'max' ? 'this session only' : 'saved as your default for new sessions'}): as asked` }
+  })
   await $.session.start(START)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'tab:control' })
@@ -166,9 +173,17 @@ test('the control tab marks the model and the effort the session is on, and a cl
   expect(await marked('effort')).toEqual(['effort:xhigh'])
   expect(await ui.find({ type: 'Text', text: 'claude-opus-5-5' })).toBeDefined()
 
+  expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at xhigh' })).toBeDefined()
+
+  // A click on a level also makes it the default for new sessions; one on max leaves that default alone, and the tab shows both.
+  await ui.press({ key: 'effort:low' })
+  await clock.settle()
+  expect(await marked('effort')).toEqual(['effort:low'])
+  expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at low' })).toBeDefined()
   await ui.press({ key: 'effort:max' })
   await clock.settle()
   expect(await marked('effort')).toEqual(['effort:max'])
+  expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at low' })).toBeDefined()
 
   // The effort stays through a change of model, as the engine keeps it.
   await ui.press({ key: 'model:haiku' })
@@ -176,6 +191,7 @@ test('the control tab marks the model and the effort the session is on, and a cl
   expect(await marked('model')).toEqual(['model:haiku'])
   expect(await marked('effort')).toEqual(['effort:max'])
   expect(await ui.find({ type: 'Text', text: 'claude-haiku-5-5' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'new sessions on this model start at its own default' })).toBeDefined()
   await ui.unmount()
 })
 
@@ -378,10 +394,10 @@ test('the effort is read from settings, from an /effort run and from a turn', ()
   expect(effortNamed('', 'Cancelled')).toBe('')
   expect(effortNamed('', '')).toBe('')
 
-  const live = { model: 'claude-opus-5-5', effort: 'max', ran: '' }
-  expect(afterTurn(live, 'max')).toEqual({ model: 'claude-opus-5-5', effort: 'max', ran: 'max' })
+  const live = { model: 'claude-opus-5-5', effort: 'max', ran: '', saved: 'xhigh' }
+  expect(afterTurn(live, 'max')).toEqual({ ...live, ran: 'max' })
   expect(afterTurn(live, 'high').effort).toBe('high')
-  expect(afterTurn({ ...live, effort: 'auto' }, 'high')).toEqual({ model: 'claude-opus-5-5', effort: 'auto', ran: 'high' })
+  expect(afterTurn({ ...live, effort: 'auto' }, 'high')).toEqual({ ...live, effort: 'auto', ran: 'high' })
   expect(effortLine({ ...live, ran: 'max' })).toBe('max')
   expect(effortLine({ ...live, effort: 'auto', ran: 'high' })).toBe('auto · last turn ran at high')
   expect(effortLine(live)).toBe('max')

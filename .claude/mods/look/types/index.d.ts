@@ -15,6 +15,10 @@ declare module 'claude-code' {
   interface PluginState {
     look: {
       project: LookProject
+      // the theme this session started on; null until the first start has read it
+      started: string | null
+      // whether skins were on when this session last looked; null before it has
+      wasOn: boolean | null
     }
   }
 }

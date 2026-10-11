@@ -26,6 +26,7 @@ import {
   isOnHere,
   pickedModel,
   rowOf,
+  savedLine,
   settingsOf,
 } from './catalog'
 
@@ -331,6 +332,11 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
         {EFFORTS.map(level =>
           pick(level, data.live.effort === level, `effort:${level}`, () => act.run('effort', level)),
         )}
+      </Box>
+      <Box paddingLeft={1}>
+        <Text dimColor wrap="wrap">
+          {savedLine(data.live)}
+        </Text>
       </Box>
       {heading(t, 'Turn', isWorking ? 'working' : 'idle')}
       <Box paddingLeft={1}>

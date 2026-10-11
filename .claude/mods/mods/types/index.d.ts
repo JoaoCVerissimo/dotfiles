@@ -11,8 +11,9 @@ export type ModsSwitches = Record<string, boolean>
 export type ModsTurn = { id: string; startedAt: number } | null
 
 // What the Control tab shows of the session: its model, the effort it is set
-// to (a level, or auto), and the level its last turn ran at ('' before one).
-export type ModsLive = { model: string; effort: string; ran: string }
+// to (a level, or auto), the level its last turn ran at ('' before one), and
+// the effort settings keep for the model, which a new session starts at.
+export type ModsLive = { model: string; effort: string; ran: string; saved: string }
 
 export type ModsRow = {
   key: string

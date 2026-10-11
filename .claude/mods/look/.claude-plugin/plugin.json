@@ -25,7 +25,7 @@
     "skins": {
       "type": "boolean",
       "title": "Skins",
-      "description": "Color each project with the skin picked for it (/skin).",
+      "description": "Pick a color skin for a project with /skin. A project keeps its skin; switching this off in a session turns it plain.",
       "required": false,
       "default": false
     },

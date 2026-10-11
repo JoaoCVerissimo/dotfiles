@@ -7,9 +7,14 @@
 // A skin is a Claude Code theme of the project's own. Each project that has
 // one gets a theme file in ~/.claude/themes/ and a `theme` line in its
 // .claude/settings.local.json naming it, which is how Claude Code itself
-// picks a theme per project. Claude Code reloads a theme file when it
-// changes, so once a session has started on the project's theme, picking
-// another skin recolors it at once; the first pick shows from the next start.
+// picks a theme per project. Claude Code settles a session's theme when the
+// session starts and lets no mod swap it, but it reloads a theme file that
+// changes. So the first pick in a project shows from the next session started
+// there, and from then on a pick recolors the running session at once.
+//
+// The skin is the project's: it stays through sessions that start with skins
+// off, which write nothing. Switching skins off in a session turns the project
+// plain, and on again brings its skin back.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
@@ -20,13 +25,19 @@ import { SKINS, autoSkin, baseName, skinOf, slugOf, themeIn, themeOf, withTheme 
 const PANE = 'look'
 const NONE: LookProject = { root: '', slug: '', skin: '', isLive: false, note: '' }
 const OFF = 'Skins are off here; switch them on in the mods panel, or with /mods skins on.'
+// Why a first pick changes nothing on screen, and what does.
+const NEXT_START = 'It shows in the next session started in this folder: Claude Code settles a session\'s colors when it starts.'
 
 const project = atom({ plugin: 'look', key: 'project' } as const, NONE)
+// The theme this session started on, and whether skins were on when it last looked.
+const started = atom({ plugin: 'look', key: 'started' } as const, null)
+const wasOn = atom({ plugin: 'look', key: 'wasOn' } as const, null)
 // The mods panel's switches for this session; absent when the panel is not loaded.
 const switches = { plugin: 'mods', key: 'switches' } as const
 
 let configDir = ''
-// The theme this process started with: the one a change of skin can recolor live.
+// The same theme, kept here too: a reload empties this module and /clear
+// empties the state, and each is refilled from the other.
 let startTheme: string | null = null
 
 async function isZen($: EngineInterface, options: PluginOptions): Promise<boolean> {
@@ -45,6 +56,24 @@ function localPath(root: string): string {
   return `${root}/.claude/settings.local.json`
 }
 
+// The theme this session started on: the only one a change of skin recolors
+// live. Settings name another as soon as a skin is picked, so it is read from
+// them once, at the first start. A session an older Look was loaded in has no
+// record of it, and is taken not to be on the project's theme.
+async function startedOn($: EngineInterface): Promise<string> {
+  const kept = await read($, started)
+  if (startTheme === null) {
+    const isFirst = (await read($, project)).root === ''
+    const theme = isFirst ? (await $.settings.read().catch(() => ({}) as Record<string, unknown>)).theme : ''
+    startTheme = kept ?? (typeof theme === 'string' ? theme : '')
+  }
+  if (kept !== startTheme) {
+    await update($, started, () => startTheme)
+  }
+
+  return startTheme
+}
+
 // Writes the project's theme file as it should read now: its skin's colors
 // while skins are on, the plain dark theme while they are off.
 async function sync($: EngineInterface, options: PluginOptions): Promise<void> {
@@ -56,6 +85,20 @@ async function sync($: EngineInterface, options: PluginOptions): Promise<void> {
   const held = await $.fs.read(themePath(current.slug)).catch(() => '')
   if (held !== wanted) {
     await $.fs.write(themePath(current.slug), wanted)
+  }
+}
+
+// Keeps the theme file in step with the skins switch: the skin's colors while
+// skins are on, the plain theme once they are switched off in this session. A
+// session that only starts with skins off writes nothing.
+async function follow($: EngineInterface, options: PluginOptions): Promise<void> {
+  const isOn = await hasSkins($, options)
+  const before = await read($, wasOn)
+  if (before !== isOn) {
+    await update($, wasOn, () => isOn)
+  }
+  if (isOn || before === true) {
+    await sync($, options)
   }
 }
 
@@ -89,7 +132,7 @@ async function pick($: EngineInterface, options: PluginOptions, id: string): Pro
       ? `${baseName(current.root)} has no skin now.`
       : current.isLive
         ? `${baseName(current.root)} wears ${skin.title}.`
-        : `${baseName(current.root)} will wear ${skin.title} from the next session that starts here.`
+        : `${skin.title} is saved for ${baseName(current.root)}. ${NEXT_START}`
   await update($, project, (old): LookProject => ({ ...old, skin: skin?.id ?? '', note }))
 
   return note
@@ -107,10 +150,10 @@ async function load($: EngineInterface, options: PluginOptions, isFirst: boolean
   const kept = typeof saved === 'object' && saved !== null ? (saved as Record<string, unknown>)[root] : undefined
   const isMine = local === `custom:${slug}`
   const skin = isMine && typeof kept === 'string' && skinOf(kept) !== undefined ? kept : ''
-  await update($, project, (): LookProject => ({ root, slug, skin, isLive: startTheme === `custom:${slug}`, note: '' }))
-  if (skin !== '') {
-    await sync($, options)
-  } else if (isFirst && options.skinsAuto === true && local === '' && (await hasSkins($, options))) {
+  const isLive = (await startedOn($)) === `custom:${slug}`
+  await update($, project, (): LookProject => ({ root, slug, skin, isLive, note: '' }))
+  await follow($, options)
+  if (skin === '' && isFirst && options.skinsAuto === true && local === '' && (await hasSkins($, options))) {
     await pick($, options, autoSkin(root).id)
   }
 }
@@ -129,10 +172,6 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const home = (await $.env.get('HOME')) ?? ''
     configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${home}/.claude`
-    if (startTheme === null) {
-      const theme = (await $.settings.read().catch(() => ({}) as Record<string, unknown>)).theme
-      startTheme = typeof theme === 'string' ? theme : ''
-    }
     await load($, options, true)
     await $.command
       .register({
@@ -155,7 +194,7 @@ export const register: Register = (on, options) => {
   // The panel switched something for this session: the theme file follows the skins switch.
   on('state.set', { plugin: 'mods', key: 'switches' }, async ($, e, next) => {
     const result = await next(e)
-    void sync($, options).catch(() => undefined)
+    void follow($, options).catch(() => undefined)
 
     return result
   })
@@ -231,7 +270,14 @@ export const register: Register = (on, options) => {
           </Text>{' '}
           {current.root === '' ? 'no project' : baseName(current.root)}
         </Text>
-        {!isOn && <Text color="warning">Skins are switched off, so the project shows the plain theme.</Text>}
+        <Text dimColor wrap="wrap">
+          colors the prompt box, Claude's marks and your own messages
+        </Text>
+        {!isOn && (
+          <Text color="warning" wrap="wrap">
+            Skins are switched off, so the project shows the plain theme.
+          </Text>
+        )}
         <Box flexDirection="column" marginTop={1}>
           {SKINS.map(skin => (
             <Box flexDirection="row" columnGap={1}>
@@ -249,13 +295,15 @@ export const register: Register = (on, options) => {
           </Button>
         </Box>
         <Box marginTop={1}>
-          <Text dimColor wrap="wrap">
-            {current.note !== ''
-              ? current.note
-              : current.isLive
-                ? 'A pick recolors this session at once.'
-                : 'A first pick shows from the next session that starts in this project.'}
-          </Text>
+          {current.isLive ? (
+            <Text dimColor wrap="wrap">
+              {current.note !== '' ? current.note : 'A pick recolors this session at once.'}
+            </Text>
+          ) : (
+            <Text color="warning" wrap="wrap">
+              {current.note !== '' ? current.note : `This session started without the project's skin, so a pick changes nothing here. ${NEXT_START}`}
+            </Text>
+          )}
         </Box>
       </Box>
     )

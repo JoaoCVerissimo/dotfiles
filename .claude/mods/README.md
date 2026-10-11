@@ -36,7 +36,7 @@ All of them start **off**. The last column is what one adds to your usage once i
 | --- | --- | --- | --- |
 | **Flow** | `flow/` | While Claude works, a band above the prompt: the prompt it is on, a progress bar, the steps by number with a mark that fills in as each is done, and the subagents at work. `/flow` opens a pane with the subagents (each type under its own mark, with its recent tool calls and what it reported), the files touched by folder, and the whole task list. Claude posts its steps through a small tool the mod gives it. | few tokens |
 | **Zen** | `look/` | Hides tool calls and their output in the transcript; a failed call still shows. `/mods zen` toggles it. | none |
-| **Skins** | `look/` | A color palette per project, as a Claude Code theme of the project's own. `/skin` opens the picker, `/skin ocean` picks by name. The first pick shows from the next session started in that project; after that a pick recolors the running session at once. | none |
+| **Skins** | `look/` | A color palette per project, as a Claude Code theme of the project's own: it colors the prompt box, Claude's marks and your own messages. `/skin` opens the picker, `/skin ocean` picks by name, `/skin none` removes it. A first pick shows from the next session started in that folder; after that a pick recolors the running session at once. | none |
 | **Keep warm** | `keepwarm/` | After each turn, one small request shortly before the prompt cache would expire, for the next two hours, so coming back does not re-read the whole context at full price. Shows what each ping read and paid, stops when a ping finds the cache gone, and says when the cache is cold. `/keepwarm` for status, `/keepwarm now` to ping. | **tokens** |
 | **Reflect** | `reflect/` | When a prompt reads like a correction or a preference, or starts with `remember:`, words it as a one-line rule and offers it above the prompt with three buttons: save for this project (`CLAUDE.local.md`), save everywhere (`~/.claude/rules/learned.md`), or skip. | few tokens |
 | **Browser** | `browser/` | `/browser localhost:3000` shows a page as text in a pane: numbered links, console output, back, reload, a small color preview, and a button that hands the page to Claude with your next prompt. Pages load in headless Chrome. | none |
@@ -84,8 +84,9 @@ spells it out on each mod's page.
 
 - **A model or effort picked in the Control tab is picked the way the command picks it.** Claude Code saves a model
   set with `/model <name>`, and an effort set with `/effort <level>`, as the default for new sessions; `max` is the one
-  level it keeps to the session. It prints which it did under the command, in the conversation. The effort stays when
-  the model changes, and through `/clear`.
+  level it keeps to the session. It prints which it did under the command, in the conversation, and under the effort
+  row the tab says what new sessions on the model start at, so a default a click changed is not missed. The effort
+  stays when the model changes, and through `/clear`.
 - **The green mark on the effort is the panel's own bookkeeping.** Claude Code tells a mod the session's model and not
   its effort, so the panel starts from the level settings keep for the model and follows every `/effort` it sees,
   clicked or typed. One thing it cannot see is the `/effort` slider's *s, for this session only*: that shows once a turn
@@ -97,6 +98,11 @@ spells it out on each mod's page.
   next machine once it is committed. This repo is public, and so is a rule pushed with it.
 - **Reflect sends the prompt it words to a model** (Haiku by default), with the end of Claude's last reply. Set *What to
   look at* to `explicit` to only take `remember:`.
+- **A skin belongs to the project, and a first pick cannot show in the session it is made in.** Claude Code settles a
+  session's theme when the session starts and lets no mod swap it, so the pick is saved and shows from the next session
+  started in that folder. From then on the project wears it in every session, with Skins switched on or not, and a new
+  pick recolors a running session at once. Switching Skins off in a session turns the project plain, and on again
+  brings its skin back.
 - **Skins write two small files**: a theme in `~/.claude/themes/` and a `theme` line in the project's `.claude/settings.local.json` (git-ignored globally here).
 - In a session that draws nowhere these mods can show (the VS Code panel, `claude -p`), Flow, Reflect, Keep warm and the alert stay out of the way.
 - The mods depend on the panel (`mods`): it holds the switches they read.
