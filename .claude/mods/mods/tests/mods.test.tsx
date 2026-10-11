@@ -31,10 +31,12 @@ function session(): Session {
   return { picked: 'Default (recommended)', model: 'claude-opus-5-5', saved: { 'claude-opus-5-5': { effortLevel: 'xhigh' } } }
 }
 
-type World = { ran?: string[][]; printed?: (argv: readonly string[]) => string; held?: Session }
+// `channel` is the notification channel the terminal offers the engine (Apple's Terminal offers none),
+// and `told` collects what the engine was asked to notify.
+type World = { ran?: string[][]; printed?: (argv: readonly string[]) => string; held?: Session; channel?: 'iterm2'; told?: string[] }
 
 // Everything the mod asks of Claude Code at a session's start, answered from memory.
-function world(on: On, { ran = [], printed = () => '', held = session() }: World = {}): MockClock {
+function world(on: On, { ran = [], printed = () => '', held = session(), channel, told = [] }: World = {}): MockClock {
   const clock = mock.clock(on, { now: 1_000_000 })
   mock.store(on)
   mock.env(on, { HOME: '/home/me', TERM_PROGRAM: 'Apple_Terminal' })
@@ -47,7 +49,11 @@ function world(on: On, { ran = [], printed = () => '', held = session() }: World
   on('session.cwd', () => ({ value: '/work/app' }))
   on('ui.panes', () => ({ value: [] }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('ui.notify', () => ({ value: { isSent: true, channel: 'terminal_bell' } }))
+  on('ui.notify', ($, e) => {
+    told.push(e.text)
+
+    return { value: channel === undefined ? { isSent: false, reason: 'no-channel' } : { isSent: true, channel } }
+  })
   on('process.run', ($, e) => {
     ran.push([...e.argv])
 
@@ -280,7 +286,7 @@ test('the done alert is off until switched on: a long turn ends in silence, then
 
   await $.turn.complete({ ...turn, durationMs: 60_000 })
   await clock.settle()
-  expect(ran.filter(argv => argv[0] === 'afplay' || argv[0] === 'osascript')).toHaveLength(0)
+  expect(alerts(ran)).toEqual([])
 
   expect((await $.command.run(typed('mods', 'alert on'))).text).toBe('Done alert is on for this session.')
   await $.turn.complete({ ...turn, durationMs: 60_000 })
@@ -288,7 +294,10 @@ test('the done alert is off until switched on: a long turn ends in silence, then
   expect(ran.some(argv => argv[0] === 'afplay')).toBe(true)
 })
 
-test('a long turn ends with a sound and a banner, a short one with neither', { options: { alert: true } }, async ($, on) => {
+// The commands an alert runs: the sound, and the bell written to the session's own terminal.
+const alerts = (ran: string[][]) => ran.filter(argv => argv[0] === 'afplay' || argv[0] === 'osascript' || (argv[0] === 'sh' && argv[2]?.includes('printf "\\a"') === true)).map(argv => argv[0])
+
+test('a long turn ends with a sound and the terminal\'s bell, a short one with neither, and no banner is posted', { options: { alert: true } }, async ($, on) => {
   const ran: string[][] = []
   const clock = world(on, { ran })
   await $.session.start(START)
@@ -296,12 +305,26 @@ test('a long turn ends with a sound and a banner, a short one with neither', { o
 
   await $.turn.complete({ ...turn, durationMs: 3000 })
   await clock.settle()
-  expect(ran.filter(argv => argv[0] === 'afplay' || argv[0] === 'osascript')).toHaveLength(0)
+  expect(alerts(ran)).toEqual([])
 
   await $.turn.complete({ ...turn, durationMs: 60_000 })
   await clock.settle()
   expect(ran.some(argv => argv[0] === 'afplay' && argv[1] === '/System/Library/Sounds/Glass.aiff')).toBe(true)
-  expect(ran.some(argv => argv[0] === 'osascript' && argv.at(-1)?.includes('Claude is done in app') === true)).toBe(true)
+  // The bell goes to the terminal this process sits on, found through its own tty.
+  expect(ran.some(argv => argv[0] === 'sh' && argv[2]?.includes('ps -o tty= -p "$PPID"') === true)).toBe(true)
+  expect([...alerts(ran)].sort()).toEqual(['afplay', 'sh'])
+})
+
+test('a terminal with notifications of its own gets one, and no bell on top', { options: { alert: true } }, async ($, on) => {
+  const ran: string[][] = []
+  const told: string[] = []
+  const clock = world(on, { ran, channel: 'iterm2', told })
+  await $.session.start(START)
+
+  await $.turn.complete({ answer: 'done', isAborted: false, turnId: 'turn-1', reason: 'answer', durationMs: 60_000 })
+  await clock.settle()
+  expect(told).toEqual(['Claude is done in app · 1m 0s'])
+  expect(alerts(ran)).toEqual(['afplay'])
 })
 
 test('the hint line carries the quick buttons, and a stop button while a turn runs', async ($, on) => {

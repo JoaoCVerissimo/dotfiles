@@ -6,7 +6,7 @@
 // land in settings.json). Control runs the commands one would otherwise type
 // (model, effort, stop) and marks what the session is set to. Sessions lists
 // the sessions on this machine and opens one. With the done alert on, a turn
-// that took a while ends with a sound and a notification.
+// that took a while ends with a sound and a mark on the session's terminal.
 //
 // The panel is the one thing that starts on: every mod it lists starts off,
 // and does nothing until its switch is flipped here.
@@ -25,6 +25,10 @@ import { buildRoster, focusScript, openingOf, parseJson, parseTitles, parseTtys,
 const PANE = 'mods'
 const USAGE = 'Usage: /mods [control|sessions|stop|close] or /mods <mod> [on|off|default] [always]'
 const TITLES = '"(customTitle|aiTitle)":"([^"\\\\]|\\\\.)*"'
+// Rings the bell of the terminal this session runs in, which marks its tab.
+// The engine names no terminal, so it is found as the tty of this process:
+// the parent of a command run from here.
+const RING = 'tty=$(ps -o tty= -p "$PPID" | tr -d " "); case "$tty" in ""|"??") exit 1 ;; esac; printf "\\a" > "/dev/$tty"'
 const PAST_SHOWN = 8
 
 const switches = atom({ plugin: 'mods', key: 'switches' } as const, {})
@@ -400,7 +404,11 @@ function actionsOf($: EngineInterface): PanelActions {
   }
 }
 
-// A turn that took a while ended: a sound, and a banner saying where.
+// A turn that took a while ended: a sound, and a mark on the session's
+// terminal. The mark is the terminal's own notification where it has one (a
+// click on it goes to the session), else its bell. No banner is posted from
+// here: macOS files one a script posts under Script Editor, and opens that
+// when it is clicked.
 async function alertDone($: EngineInterface, options: PluginOptions, durationMs: number, isAnswer: boolean): Promise<void> {
   const isOn = (await read($, switches)).alert ?? options.alert === true
   const after = typeof options.alertAfterSeconds === 'number' ? options.alertAfterSeconds : 20
@@ -416,12 +424,9 @@ async function alertDone($: EngineInterface, options: PluginOptions, durationMs:
   }
   const where = baseName(await $.session.cwd().catch(() => '')) || 'this session'
   const text = `${isAnswer ? 'Claude is done' : 'The turn ended'} in ${where} · ${took(durationMs)}`
-  const banner = ['on run argv', 'display notification (item 1 of argv) with title "Claude Code"', 'end run']
-  const shown = await $.process
-    .run(['osascript', ...banner.flatMap(line => ['-e', line]), text], { timeoutMs: 10_000 })
-    .catch(() => null)
-  if (shown === null || shown.exitCode !== 0) {
-    await $.ui.notify(text, { title: 'Claude Code' }).catch(() => undefined)
+  const sent = await $.ui.notify(text, { title: 'Claude Code' }).catch(() => null)
+  if (sent !== null && !sent.isSent && sent.reason === 'no-channel') {
+    await $.process.run(['sh', '-c', RING], { timeoutMs: 5000 }).catch(() => undefined)
   }
 }
 

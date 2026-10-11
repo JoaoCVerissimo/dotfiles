@@ -10,7 +10,7 @@
     "alert": {
       "type": "boolean",
       "title": "Done alert",
-      "description": "Play a sound or raise a notification when a turn ends.",
+      "description": "When a turn that took a while ends, play a sound and mark the session's terminal.",
       "required": false,
       "default": false
     },
@@ -24,8 +24,8 @@
     },
     "alertNotify": {
       "type": "boolean",
-      "title": "Alert notification",
-      "description": "Raise a desktop notification when a turn ends.",
+      "title": "Mark the terminal",
+      "description": "When a turn ends, notify through the terminal itself: its own notification where it has one, else its bell, which marks the session's tab.",
       "required": false,
       "default": true
     },

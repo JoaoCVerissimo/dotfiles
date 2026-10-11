@@ -40,7 +40,7 @@ All of them start **off**. The last column is what one adds to your usage once i
 | **Keep warm** | `keepwarm/` | After each turn, one small request shortly before the prompt cache would expire, for the next two hours, so coming back does not re-read the whole context at full price. Shows what each ping read and paid, stops when a ping finds the cache gone, and says when the cache is cold. `/keepwarm` for status, `/keepwarm now` to ping. | **tokens** |
 | **Reflect** | `reflect/` | When a prompt reads like a correction or a preference, or starts with `remember:`, words it as a one-line rule and offers it above the prompt with three buttons: save for this project (`CLAUDE.local.md`), save everywhere (`~/.claude/rules/learned.md`), or skip. | few tokens |
 | **Browser** | `browser/` | `/browser localhost:3000` shows a page as text in a pane: numbered links, console output, back, reload, a small color preview, and a button that hands the page to Claude with your next prompt. Pages load in headless Chrome. | none |
-| **Done alert** | `mods/` | A sound and a notification when a turn that took a while ends. | none |
+| **Done alert** | `mods/` | When a turn that took a while ends: a sound, and a mark on the session's terminal (its own notification where it has one, else its bell, which marks the tab). | none |
 | Next steps | Anthropic | Up to three suggested next prompts after each turn. Its number keys are Anthropic's own: `1` `2` `3` put a suggestion in the prompt box as a draft (nothing is sent until you press Enter), `0` dismisses. | **tokens** |
 | Blast radius | Anthropic | Holds a risky shell command (`rm -rf`, `git reset --hard`, a force push, a migration) and shows what it would change. | none |
 | You should know | built in | A side agent that points out things you might miss on longer tasks. | **tokens** |
@@ -99,6 +99,12 @@ spells it out on each mod's page.
   next machine once it is committed. This repo is public, and so is a rule pushed with it.
 - **Reflect sends the prompt it words to a model** (Haiku by default), with the end of Claude's last reply. Set *What to
   look at* to `explicit` to only take `remember:`.
+- **The done alert posts no banner of its own.** macOS files a banner posted from a script under Script Editor, and
+  opens that when the banner is clicked. So the alert asks the terminal instead: iTerm2, kitty and Ghostty have
+  notifications of their own, and a click on one goes to the session. Apple's Terminal has none, so there the alert
+  rings the bell on the session's own tab, which Terminal marks (and badges in the Dock when it is in the background).
+  With an audible bell that is a second sound beside the alert's: set *Alert sound* to `none`, or switch *Mark the
+  terminal* off, to keep one.
 - **A skin belongs to the project, and a first pick cannot show in the session it is made in.** Claude Code settles a
   session's theme when the session starts and lets no mod swap it, so the pick is saved and shows from the next session
   started in that folder. From then on the project wears it in every session, with Skins switched on or not, and a new

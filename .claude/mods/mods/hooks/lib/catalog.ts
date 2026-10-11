@@ -106,7 +106,7 @@ export const FEATURES: readonly Feature[] = [
     field: 'alert',
     title: 'Done alert',
     blurb: 'sound when a turn ends',
-    usage: { level: 'none', note: 'Plain code: a sound and a notification from this machine.' },
+    usage: { level: 'none', note: 'Plain code: a sound from this machine, and the terminal\'s own notification or bell.' },
   },
 ]
 
