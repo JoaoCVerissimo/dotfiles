@@ -6,8 +6,9 @@
 // the subagents, each under a mark of its own with its recent tool calls and
 // what it reported; the files touched, by folder; the whole task list.
 //
-// Everything is observed: tool calls (tasks, files, counts), agent spawns and
-// turn ends. Nothing is asked of the model and nothing it sees is changed.
+// Almost everything is observed: tool calls (tasks, files, counts), agent
+// spawns and turn ends. The one thing asked of Claude is its plan, through a
+// small steps tool it is given only while Flow is switched on.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
@@ -46,6 +47,9 @@ const STEPS_SCHEMA = {
 }
 const STEPS_SECTION =
   `For work that takes several steps, post your plan with the ${STEPS_TOOL} tool and update it as each step starts and finishes; the user follows it as a progress bar. Skip it for quick answers.`
+// What the tool reads as once Flow is switched off again.
+const STEPS_PARKED = 'Switched off by the user: do not call it.'
+const OFF = 'Flow is off here; switch it on in the mods panel, or with /mods flow on.'
 // A prompt names the turn that follows it at once; later, a turn is the same job going on.
 const TITLE_HOLDS_MS = 5000
 const FILE_OPS: Readonly<Record<string, FileOp>> = { Read: 'R', Edit: 'E', Write: 'W', NotebookEdit: 'E' }
@@ -59,7 +63,11 @@ const view = atom({ plugin: 'flow', key: 'view' } as const, { tab: 'agents', age
 const switches = { plugin: 'mods', key: 'switches' } as const
 
 // Whether Flow is on, as of the turn's start: a tool call does not ask again.
-let isTracking = true
+let isTracking = false
+// Whether the steps tool has been declared in this session, and whether it is
+// in front of Claude now. Read again at each start.
+let hasSteps = false
+let isOffered = false
 // Whether this session draws where the band and pane show: a terminal or the desktop app.
 // Elsewhere (an editor's chat panel, a headless run) Flow stays out of the way.
 let canDraw = false
@@ -71,7 +79,24 @@ type Loose = Record<string, unknown>
 async function isOn($: EngineInterface, options: PluginOptions): Promise<boolean> {
   const here = (await read($, switches).catch(() => undefined))?.flow
 
-  return canDraw && (here ?? options.enabled !== false)
+  return canDraw && (here ?? options.enabled === true)
+}
+
+// The steps tool follows Flow's switch. It is declared the first time Flow is
+// on, never before, so a session with Flow off pays nothing for it. A declared
+// tool cannot be taken back: switched off again, the `tool.describe` hook below
+// answers one line for it and moves it behind ToolSearch. The engine keeps a
+// tool's description for the session, so each change tells it to ask again.
+async function syncSteps($: EngineInterface, options: PluginOptions): Promise<void> {
+  const isWanted = options.steps !== false && (await isOn($, options))
+  if (isWanted && !hasSteps) {
+    await $.tool.register({ name: 'steps', description: STEPS_DESCRIPTION, inputSchema: STEPS_SCHEMA, isDeferred: false })
+    hasSteps = true
+  }
+  if (isWanted !== isOffered) {
+    isOffered = isWanted
+    $.ui.invalidate('tool.describe')
+  }
 }
 
 async function openPane($: EngineInterface, tab: FlowView['tab'] | null): Promise<void> {
@@ -116,11 +141,11 @@ export const register: Register = (on, options) => {
     root = await $.session.root().catch(() => e.cwd)
     canDraw = e.surface === 'terminal' || e.surface === 'desktop'
     isTracking = await isOn($, options)
-    if (options.steps !== false && canDraw) {
-      await $.tool
-        .register({ name: 'steps', description: STEPS_DESCRIPTION, inputSchema: STEPS_SCHEMA, isDeferred: false })
-        .catch(error => $.ui.log(String(error), { to: 'debug' }))
-    }
+    // A reload starts this module over while the session may keep the tool it declared:
+    // taken as offered, so that the first sync puts it away if Flow is off now.
+    hasSteps = (await $.tool.list().catch(() => [])).some(tool => tool.name === STEPS_TOOL)
+    isOffered = hasSteps
+    await syncSteps($, options).catch(error => $.ui.log(String(error), { to: 'debug' }))
     await $.command
       .register({
         name: 'flow',
@@ -133,7 +158,18 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // The panel switched something for this session: the steps tool follows Flow's switch.
+  on('state.set', { plugin: 'mods', key: 'switches' }, async ($, e, next) => {
+    const result = await next(e)
+    void syncSteps($, options).catch(() => undefined)
+
+    return result
+  })
+
   on('command.run', { command: 'flow' }, async ($, e) => {
+    if (!(await isOn($, options))) {
+      return { text: OFF }
+    }
     const word = e.args.trim().toLowerCase()
     await openPane($, word === 'agents' || word === 'files' || word === 'tasks' ? word : null)
 
@@ -170,8 +206,18 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // What Claude reads about the steps tool, and where it waits, follow the switch.
+  on('tool.describe', { tool: STEPS_TOOL }, async ($, e, next) => {
+    const described = await next(e)
+
+    return isOffered ? { ...described, isDeferred: false } : { description: STEPS_PARKED, isDeferred: true }
+  })
+
   // Claude's own step list: answered here, never run anywhere.
   on('tool.call', { tool: STEPS_TOOL }, async ($, e) => {
+    if (!isOffered) {
+      return { result: 'Not shown: the user switched Flow off. Do not call this tool again.' }
+    }
     if (e.agentId === undefined) {
       await update($, tasks, () => tasksOfTodos((e as unknown as Loose).steps))
     }
@@ -280,7 +326,8 @@ export const register: Register = (on, options) => {
 
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
-    if (options.steps === false || !isTracking || e.traits.includes('teammate') || !e.tools.includes(STEPS_TOOL)) {
+    // The sentence goes with the tool: only while it is in front of Claude.
+    if (!isOffered || e.traits.includes('teammate') || !e.tools.includes(STEPS_TOOL)) {
       return composed
     }
 

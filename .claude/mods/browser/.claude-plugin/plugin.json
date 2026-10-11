@@ -13,7 +13,7 @@
       "title": "Browser",
       "description": "Offer the /browser pane.",
       "required": false,
-      "default": true
+      "default": false
     },
     "agentTool": {
       "type": "boolean",

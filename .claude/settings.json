@@ -46,9 +46,9 @@
     "keepwarm@jv-mods": true,
     "reflect@jv-mods": true,
     "browser@jv-mods": true,
-    "next-steps@claude-community": true,
+    "next-steps@claude-community": false,
     "blast-radius@claude-code-playground-mods": false,
-    "cc-plugin-you-should-know@builtin": true
+    "cc-plugin-you-should-know@builtin": false
   },
   "extraKnownMarketplaces": {
     "37signals": {

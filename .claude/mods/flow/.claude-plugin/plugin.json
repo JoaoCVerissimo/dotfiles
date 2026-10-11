@@ -23,7 +23,7 @@
       "title": "Flow",
       "description": "Track turns, tasks, subagents and files, and draw the progress band.",
       "required": false,
-      "default": true
+      "default": false
     },
     "band": {
       "type": "string",

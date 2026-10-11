@@ -167,7 +167,7 @@ function drawMods(t: Kit, data: PanelData, act: PanelActions): RenderElement {
       })}
       <Box marginTop={1}>
         <Text dimColor wrap="wrap">
-          click a mod's name to switch it for this session · the right side opens its always switch, its settings and what it uses
+          every mod starts off · click its name to switch it for this session · the right side opens its switch for every session, its settings and what it uses
         </Text>
       </Box>
     </Box>

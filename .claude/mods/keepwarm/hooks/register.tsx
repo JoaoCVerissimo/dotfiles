@@ -19,6 +19,7 @@ import { isCold, isWarmRead, lineOf, nextPingAt, pickTtl, span, tokens, ttlMs } 
 
 const PING = 'Reply with the single word: ok'
 const HOUR = 3_600_000
+const OFF = 'Keep warm is off here; switch it on in the mods panel, or with /mods keepwarm on.'
 const IDLE: KeepwarmWatch = {
   status: 'idle',
   reason: '',
@@ -143,9 +144,7 @@ async function status($: EngineInterface, options: PluginOptions): Promise<strin
   const current = await read($, watch)
   const isEnabled = await isOn($, options)
   const line = lineOf(current, now, true, true)
-  const head = isEnabled
-    ? `Keep warm is on here (cache lifetime ${current.ttl}, ${hoursOf(options)}h window).`
-    : 'Keep warm is off here; switch it on in the mods panel, or with /mods keepwarm on.'
+  const head = isEnabled ? `Keep warm is on here (cache lifetime ${current.ttl}, ${hoursOf(options)}h window).` : OFF
 
   return line === null ? `${head} Nothing to report until the first turn ends.` : `${head} ${line.text}.`
 }
@@ -156,8 +155,13 @@ export const register: Register = (on, options) => {
     ttlSetting = (await $.settings.read().catch(() => ({}) as Record<string, unknown>)).promptCacheTtl
     // A reload drops the timer; the watch survives it, so pick the countdown up again.
     await arm($, options)
-    // The line counts down in minutes.
-    $.clock.every(60_000, () => $.ui.invalidate('ui.render'))
+    // The line counts down in minutes; switched off there is no line to redraw.
+    $.clock.every(60_000, () => {
+      void isOn($, options).then(
+        isEnabled => (isEnabled ? $.ui.invalidate('ui.render') : undefined),
+        () => undefined,
+      )
+    })
     await $.command
       .register({
         name: 'keepwarm',
@@ -202,7 +206,8 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'keepwarm' }, async ($, e) => {
     const word = e.args.trim().toLowerCase()
     if (word === 'now') {
-      return { text: await ping($, options, true) }
+      // A ping is a model request: none goes out while the mod is off, asked for or not.
+      return { text: (await isOn($, options)) ? await ping($, options, true) : OFF }
     }
     return { text: await status($, options) }
   })

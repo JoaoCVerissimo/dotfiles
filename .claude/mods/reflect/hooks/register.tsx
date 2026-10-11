@@ -21,6 +21,7 @@ import { JUDGE_SYSTEM, cleanRule, explicitRule, isCandidate, itemsOf, judgePromp
 
 const QUEUE_MAX = 5
 const GLOBAL_PREFACE = '# What Claude has learned about how I work\n\nRules I saved from my own corrections with the reflect mod. Edit freely.\n\n'
+const OFF = 'Reflect is off here; switch it on in the mods panel, or with /mods reflect on.'
 
 const pending = atom({ plugin: 'reflect', key: 'pending' } as const, [])
 const saved = atom({ plugin: 'reflect', key: 'saved' } as const, [])
@@ -35,7 +36,7 @@ const queue: string[] = []
 let isJudging = false
 
 async function isOn($: EngineInterface, options: PluginOptions): Promise<boolean> {
-  return canDraw && ((await read($, switches).catch(() => undefined))?.reflect ?? options.enabled !== false)
+  return canDraw && ((await read($, switches).catch(() => undefined))?.reflect ?? options.enabled === true)
 }
 
 async function held($: EngineInterface): Promise<ReflectItem[]> {
@@ -156,6 +157,9 @@ export const register: Register = (on, options) => {
   })
 
   on('command.run', { command: 'reflect' }, async ($, e) => {
+    if (!(await isOn($, options))) {
+      return { text: OFF }
+    }
     if (e.args.trim().toLowerCase() === 'clear') {
       const kept = (await held($)).filter(item => item.root !== root)
       await $.store.set('items', kept).catch(() => undefined)

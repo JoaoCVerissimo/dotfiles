@@ -19,6 +19,7 @@ import { SKINS, autoSkin, baseName, skinOf, slugOf, themeIn, themeOf, withTheme 
 
 const PANE = 'look'
 const NONE: LookProject = { root: '', slug: '', skin: '', isLive: false, note: '' }
+const OFF = 'Skins are off here; switch them on in the mods panel, or with /mods skins on.'
 
 const project = atom({ plugin: 'look', key: 'project' } as const, NONE)
 // The mods panel's switches for this session; absent when the panel is not loaded.
@@ -33,7 +34,7 @@ async function isZen($: EngineInterface, options: PluginOptions): Promise<boolea
 }
 
 async function hasSkins($: EngineInterface, options: PluginOptions): Promise<boolean> {
-  return (await read($, switches).catch(() => undefined))?.skins ?? options.skins !== false
+  return (await read($, switches).catch(() => undefined))?.skins ?? options.skins === true
 }
 
 function themePath(slug: string): string {
@@ -160,6 +161,9 @@ export const register: Register = (on, options) => {
   })
 
   on('command.run', { command: 'skin' }, async ($, e) => {
+    if (!(await hasSkins($, options))) {
+      return { text: OFF }
+    }
     const word = e.args.trim().toLowerCase()
     if (word === '') {
       await openPane($)

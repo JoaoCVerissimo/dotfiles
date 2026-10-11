@@ -70,7 +70,8 @@ export type Line = { tone: 'warm' | 'cold' | 'note'; text: string }
 
 // The band's line for the watch as it stands now, or null with nothing to say.
 export function lineOf(watch: KeepwarmWatch, now: number, isOn: boolean, hasColdNote: boolean): Line | null {
-  if (watch.freshAt === 0) {
+  // Switched off, the mod draws nothing: not even that the cache went cold.
+  if (!isOn || watch.freshAt === 0) {
     return null
   }
   const spent = watch.pings === 0 ? '' : ` · ${watch.pings} ping${watch.pings === 1 ? '' : 's'}, ${tokens(watch.readTokens)} read`
@@ -81,9 +82,6 @@ export function lineOf(watch: KeepwarmWatch, now: number, isOn: boolean, hasCold
     const size = watch.context > 0 ? `about ${tokens(watch.context)} tokens` : 'the whole context'
 
     return { tone: 'cold', text: `cache cold for ${span(now - watch.freshAt - ttlMs(watch.ttl))} · the next turn re-reads ${size} at full price${spent}` }
-  }
-  if (!isOn) {
-    return null
   }
   const left = span(watch.freshAt + ttlMs(watch.ttl) - now)
   if (watch.status === 'armed' && watch.nextAt > 0) {

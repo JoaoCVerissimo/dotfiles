@@ -17,8 +17,8 @@ const ROWS = [
   { key: 'model', label: 'Model', kind: 'choice', value: 'opus', options: ['default', 'opus', 'haiku'], provider: { plugin: 'engine', tier: 'core' }, isLocked: false },
   { key: 'look.zen', label: 'Zen', kind: 'boolean', value: false, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
   { key: 'look.zenErrors', label: 'Zen keeps failures', kind: 'boolean', value: true, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
-  { key: 'look.skins', label: 'Skins', kind: 'boolean', value: true, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
-  { key: 'mods.alert', label: 'Done alert', kind: 'boolean', value: true, provider: { plugin: 'mods', tier: 'user' }, isLocked: false },
+  { key: 'look.skins', label: 'Skins', kind: 'boolean', value: false, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
+  { key: 'mods.alert', label: 'Done alert', kind: 'boolean', value: false, provider: { plugin: 'mods', tier: 'user' }, isLocked: false },
   { key: 'mods.alertSound', label: 'Alert sound', kind: 'choice', value: 'Glass', options: ['none', 'Glass'], provider: { plugin: 'mods', tier: 'user' }, isLocked: false },
 ] as const
 
@@ -131,7 +131,23 @@ test('the control tab runs the model command and stops the running turn', async 
   await ui.unmount()
 })
 
-test('a long turn ends with a sound and a banner, a short one with neither', async ($, on) => {
+test('the done alert is off until switched on: a long turn ends in silence, then with a sound once /mods switches it', async ($, on) => {
+  const ran: string[][] = []
+  const clock = world(on, ran)
+  await $.session.start(START)
+  const turn = { answer: 'done', isAborted: false, turnId: 'turn-1', reason: 'answer' } as const
+
+  await $.turn.complete({ ...turn, durationMs: 60_000 })
+  await clock.settle()
+  expect(ran.filter(argv => argv[0] === 'afplay' || argv[0] === 'osascript')).toHaveLength(0)
+
+  expect((await $.command.run(typed('mods', 'alert on'))).text).toBe('Done alert is on for this session.')
+  await $.turn.complete({ ...turn, durationMs: 60_000 })
+  await clock.settle()
+  expect(ran.some(argv => argv[0] === 'afplay')).toBe(true)
+})
+
+test('a long turn ends with a sound and a banner, a short one with neither', { options: { alert: true } }, async ($, on) => {
   const ran: string[][] = []
   const clock = world(on, ran)
   await $.session.start(START)

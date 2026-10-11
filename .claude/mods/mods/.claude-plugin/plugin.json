@@ -12,7 +12,7 @@
       "title": "Done alert",
       "description": "Play a sound or raise a notification when a turn ends.",
       "required": false,
-      "default": true
+      "default": false
     },
     "alertSound": {
       "type": "string",

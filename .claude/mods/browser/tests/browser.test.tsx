@@ -1,7 +1,25 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
+import type { Plugin } from 'claude-code/testing'
 
 import { consoleLines, decode, normalizeUrl, rasterOf, toMarkdown } from '../hooks/lib/html'
+
+// The panel as the browser sees it: the switches it keeps for the session, flipped here by a command.
+const PANEL: Plugin = {
+  name: 'mods',
+  register(on) {
+    on('command.run', { command: 'flip' }, async ($, e) => {
+      await $.state.set({ plugin: 'mods', key: 'switches' } as const, JSON.parse(e.args))
+
+      return {}
+    })
+  },
+}
+
+// A command as the person's own Enter raises it.
+function typed(command: string, args: string) {
+  return { command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 170 } } as const
+}
 
 const PAGE = `<!doctype html><html><head><title> Test &amp; shop </title><style>p{color:red}</style>
 <script>console.log("<b>not text</b>")</script></head>
@@ -20,13 +38,20 @@ const PANE = {
 } as const
 
 // A machine with Chrome whose pages come from `pages`: the DOM dump lands in the file the mod reads back.
-function world(on: On, pages: Record<string, string>): { ran: string[][] } {
+function world(on: On, pages: Record<string, string>): { ran: string[][]; declared: string[] } {
   const files = new Map<string, string>()
   const ran: string[][] = []
+  // The tools the mod declares to Claude, in order.
+  const declared: string[] = []
   mock.clock(on)
   mock.env(on, { TMPDIR: '/tmp/t/' })
   on('session.start', () => ({ cwd: '/work/app' }))
   on('command.register', () => ({ value: { command: 'browser' } }))
+  on('tool.register', ($, e) => {
+    declared.push(e.name)
+
+    return { value: { tool: `mcp__browser__${e.name}` } }
+  })
   on('ui.panes', () => ({ value: [] }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.toast', () => ({ value: undefined }))
@@ -50,12 +75,40 @@ function world(on: On, pages: Record<string, string>): { ran: string[][] } {
   on('prompt.fill', () => ({ isFilled: true, text: '', cursor: 0 }))
   on('prompt.submit', ($, e) => ({ text: e.text, context: e.context }))
 
-  return { ran }
+  return { ran, declared }
 }
 
 const START = { surface: 'terminal', isInteractive: true, cwd: '/work/app' } as const
+// The browser starts off; these run it as the always switch leaves it.
+const ON = { options: { enabled: true } } as const
 
-test('a page loads through headless Chrome, links follow by number, and back returns', async ($, on) => {
+test('off until it is switched on: /browser says where the switch is and loads nothing', async ($, on) => {
+  const { ran } = world(on, { 'http://localhost:3000/': PAGE })
+  await $.session.start(START)
+
+  expect((await $.command.run(typed('browser', 'localhost:3000'))).text).toBe('Browser is off here; switch it on in the mods panel, or with /mods browser on.')
+  expect(ran).toEqual([])
+})
+
+test('Claude gets its page tool only while the mod is on', { plugins: [PANEL], options: { agentTool: true } }, async ($, on) => {
+  const { declared } = world(on, {})
+  await $.session.start(START)
+  // "Let Claude open pages" is set, but the mod is off: nothing is declared to Claude.
+  expect(declared).toEqual([])
+
+  await $.command.run(typed('flip', '{"browser":true}'))
+  expect(declared).toEqual(['open'])
+  // Declared once: another switch does not declare it again.
+  await $.command.run(typed('flip', '{"browser":true,"zen":true}'))
+  expect(declared).toEqual(['open'])
+
+  // Switched off again, a call is refused.
+  await $.command.run(typed('flip', '{"browser":false}'))
+  const refused = await $.tool.call({ tool: 'mcp__browser__open', url: 'http://localhost:3000/' })
+  expect(refused.deny).toBe('The browser mod is switched off for this session.')
+})
+
+test('a page loads through headless Chrome, links follow by number, and back returns', ON, async ($, on) => {
   const { ran } = world(on, {
     'http://localhost:3000/': PAGE,
     'http://localhost:3000/about.html': '<html><head><title>About</title></head><body><h1>About us</h1><a href="/">Home</a></body></html>',
@@ -82,7 +135,7 @@ test('a page loads through headless Chrome, links follow by number, and back ret
   await ui.unmount()
 })
 
-test('handing a page to Claude sends its text once, marked as web content', async ($, on) => {
+test('handing a page to Claude sends its text once, marked as web content', ON, async ($, on) => {
   world(on, { 'http://localhost:3000/': PAGE })
   await $.session.start(START)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })

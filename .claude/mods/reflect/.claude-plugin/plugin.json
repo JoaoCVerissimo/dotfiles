@@ -13,7 +13,7 @@
       "title": "Reflect",
       "description": "Offer to save rules learned from your corrections.",
       "required": false,
-      "default": true
+      "default": false
     },
     "detect": {
       "type": "string",

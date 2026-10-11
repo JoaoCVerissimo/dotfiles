@@ -75,6 +75,7 @@ link .claude/CLAUDE.md     "$HOME/.claude/CLAUDE.md"
 link .claude/statusline.sh "$HOME/.claude/statusline.sh"
 link .claude/agents        "$HOME/.claude/agents"
 link .claude/commands      "$HOME/.claude/commands"
+link .claude/rules         "$HOME/.claude/rules"
 
 # VS Code: keybindings are linked; settings.json is seeded because extensions write machine state into it
 link vscode/keybindings.json "$VSCODE_USER/keybindings.json"

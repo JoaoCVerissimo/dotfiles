@@ -5,7 +5,11 @@
 // for every session and its settings (the engine's own /config rows, so they
 // land in settings.json). Control runs the commands one would otherwise type:
 // model, effort, plan mode, stop. Sessions lists the sessions on this machine
-// and opens one. A turn that took a while ends with a sound and a notification.
+// and opens one. With the done alert on, a turn that took a while ends with a
+// sound and a notification.
+//
+// The panel is the one thing that starts on: every mod it lists starts off,
+// and does nothing until its switch is flipped here.
 
 import { atom, read, update } from 'claude-code'
 import type { ConfigRow, EngineInterface, PluginOptions, Register } from 'claude-code'
@@ -361,7 +365,7 @@ function actionsOf($: EngineInterface): PanelActions {
 
 // A turn that took a while ended: a sound, and a banner saying where.
 async function alertDone($: EngineInterface, options: PluginOptions, durationMs: number, isAnswer: boolean): Promise<void> {
-  const isOn = (await read($, switches)).alert ?? options.alert !== false
+  const isOn = (await read($, switches)).alert ?? options.alert === true
   const after = typeof options.alertAfterSeconds === 'number' ? options.alertAfterSeconds : 20
   if (!isOn || durationMs < after * 1000) {
     return

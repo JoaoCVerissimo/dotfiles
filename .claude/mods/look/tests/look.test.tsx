@@ -67,7 +67,18 @@ test('without zen the rows are Claude Code\'s own', async ($, on) => {
   await row.unmount()
 })
 
-test('picking a skin writes the project\'s theme file and names it in the project\'s local settings', async ($, on) => {
+test('skins are off until switched on: /skin says where the switch is and writes nothing', async ($, on) => {
+  const files = new Map<string, string>()
+  world(on, files)
+  await $.session.start(START)
+  const typed = (args: string) => ({ command: 'skin', args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 150 } }) as const
+
+  expect((await $.command.run(typed('ocean'))).text).toBe('Skins are off here; switch them on in the mods panel, or with /mods skins on.')
+  expect((await $.command.run(typed(''))).text).toBe('Skins are off here; switch them on in the mods panel, or with /mods skins on.')
+  expect([...files.keys()]).toEqual([])
+})
+
+test('picking a skin writes the project\'s theme file and names it in the project\'s local settings', { options: { skins: true } }, async ($, on) => {
   const files = new Map<string, string>([['/work/shop/.claude/settings.local.json', '{\n  "permissions": { "allow": ["Bash(ls)"] }\n}\n']])
   world(on, files)
   await $.session.start(START)

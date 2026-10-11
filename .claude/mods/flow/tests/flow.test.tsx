@@ -1,7 +1,37 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
+import type { Plugin } from 'claude-code/testing'
 
 import { barOf, describe as describeCall, designOf, progressOf, taskCreated, taskUpdated, tasksOfTodos, touched, treeOf, windowOf } from '../hooks/lib/model'
+
+// The panel as Flow sees it: the switches it keeps for the session, flipped here by a command.
+const PANEL: Plugin = {
+  name: 'mods',
+  register(on) {
+    on('command.run', { command: 'flip' }, async ($, e) => {
+      await $.state.set({ plugin: 'mods', key: 'switches' } as const, JSON.parse(e.args))
+
+      return {}
+    })
+  },
+}
+
+// A command as the person's own Enter raises it.
+function typed(command: string, args: string) {
+  return { command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 160 } } as const
+}
+
+// The system prompt of a request that offers Claude the steps tool.
+const COMPOSE = {
+  model: 'claude-opus-5-5',
+  promptModel: 'claude-opus-5-5',
+  surfaces: ['terminal'],
+  tools: ['Read', 'mcp__flow__steps'],
+  outputStyle: null,
+  traits: [],
+} as const
+
+type Declared = { name: string; description: string; isDeferred: boolean | undefined }
 
 const BAND = {
   plugin: 'flow',
@@ -18,25 +48,85 @@ const PANE = {
   props: { title: 'Flow', isFocused: true, bodyColumns: 52, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} },
 } as const
 
-function world(on: On): void {
+// A session, and every tool the mod declares to Claude in it, in order.
+function world(on: On): { declared: Declared[] } {
+  const declared: Declared[] = []
   mock.clock(on, { now: 5_000_000 })
   on('session.start', () => ({ cwd: '/work/app' }))
   on('session.root', () => ({ value: '/work/app' }))
   on('command.register', () => ({ value: { command: 'flow' } }))
-  on('tool.register', () => ({ value: { tool: 'mcp__flow__steps' } }))
+  on('ui.panes', () => ({ value: [] }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('tool.list', () => ({ value: [] }))
+  on('tool.register', ($, e) => {
+    declared.push({ name: e.name, description: e.description, isDeferred: e.isDeferred })
+
+    return { value: { tool: `mcp__flow__${e.name}` } }
+  })
+  on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'You are Claude.', scope: 'shared' }] }))
   on('prompt.submit', ($, e) => ({ text: e.text }))
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('agent.spawn', () => ({ model: 'claude-haiku-5-5', agentId: 'agent-1' }))
   on('tool.call', ($, e) => ({ result: e.tool === 'Write' ? { type: 'create', filePath: '/work/app/src/a.ts' } : 'ok' }))
   on('ui.render', () => ({ type: 'Text', props: {}, children: ['engine'] }))
+
+  return { declared }
 }
 
 const START = { surface: 'terminal', isInteractive: true, cwd: '/work/app' } as const
+// Flow starts off; these run it as the always switch leaves it.
+const ON = { options: { enabled: true } } as const
 
-test('the band follows a turn: its prompt, the steps Claude posts, the tools it runs', async ($, on) => {
-  world(on)
+test('off until it is switched on: no tool for Claude, no band, and /flow says where the switch is', async ($, on) => {
+  const { declared } = world(on)
   await $.session.start(START)
+  await $.prompt.submit({ text: 'Fix the login bug', origin: { kind: 'composer' }, wait: false })
+  await $.turn.start({ text: 'Fix the login bug', turnId: 'turn-1' })
+  await $.tool.call({ tool: 'Write', file_path: '/work/app/src/a.ts', content: 'x' })
+
+  // Nothing is declared to Claude and nothing is added to its prompt, so an idle Flow costs nothing.
+  expect(declared).toEqual([])
+  expect((await $.prompt.compose(COMPOSE)).sections.map(section => section.id)).toEqual(['intro'])
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /Fix the login bug/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: 'engine' })).toBeDefined()
+  await ui.unmount()
+  expect((await $.command.run(typed('flow', ''))).text).toBe('Flow is off here; switch it on in the mods panel, or with /mods flow on.')
+})
+
+test('the panel\'s switch brings the steps tool, and puts it away behind ToolSearch when it goes off again', { plugins: [PANEL] }, async ($, on) => {
+  const { declared } = world(on)
+  // The tool as the engine renders it for Claude, before the mod's own say.
+  const rendered = { tool: 'mcp__flow__steps', description: 'as declared', provider: { plugin: 'flow', tier: 'user' } } as const
+  on('tool.describe', ($, e) => ({ description: e.description }))
+  await $.session.start(START)
+  expect(declared).toEqual([])
+
+  await $.command.run(typed('flip', '{"flow":true}'))
+  expect(declared.map(tool => `${tool.name} deferred:${tool.isDeferred}`)).toEqual(['steps deferred:false'])
+  expect(await $.tool.describe(rendered)).toEqual({ description: 'as declared', isDeferred: false })
+  expect((await $.prompt.compose(COMPOSE)).sections.map(section => section.id)).toEqual(['intro', 'flow:steps'])
+
+  // Switched off: the tool stays declared (it cannot be taken back), reads as one line and waits behind ToolSearch.
+  await $.command.run(typed('flip', '{"flow":false,"zen":true}'))
+  expect(await $.tool.describe(rendered)).toEqual({ description: 'Switched off by the user: do not call it.', isDeferred: true })
+  expect((await $.prompt.compose(COMPOSE)).sections.map(section => section.id)).toEqual(['intro'])
+  // A call that still comes is answered, and told it showed nothing.
+  const late = await $.tool.call({ tool: 'mcp__flow__steps', steps: [{ text: 'One', status: 'pending' }] })
+  expect(late.result).toBe('Not shown: the user switched Flow off. Do not call this tool again.')
+
+  // Switched on again, it is back in front without being declared twice.
+  await $.command.run(typed('flip', '{"flow":true,"zen":true}'))
+  expect(await $.tool.describe(rendered)).toEqual({ description: 'as declared', isDeferred: false })
+  expect(declared).toHaveLength(1)
+})
+
+test('the band follows a turn: its prompt, the steps Claude posts, the tools it runs', ON, async ($, on) => {
+  const { declared } = world(on)
+  await $.session.start(START)
+  // Switched on for every session, the steps tool is in the prompt's tool list from the start.
+  expect(declared.map(tool => `${tool.name} deferred:${tool.isDeferred}`)).toEqual(['steps deferred:false'])
   await $.prompt.submit({ text: 'Fix the login bug\nand add a test', origin: { kind: 'composer' }, wait: false })
   await $.turn.start({ text: 'Fix the login bug\nand add a test', turnId: 'turn-1' })
   await $.tool.call({
@@ -58,7 +148,7 @@ test('the band follows a turn: its prompt, the steps Claude posts, the tools it 
   await ui.unmount()
 })
 
-test('a turn nobody typed carries the job on, and the band leaves when the work is over', async ($, on) => {
+test('a turn nobody typed carries the job on, and the band leaves when the work is over', ON, async ($, on) => {
   world(on)
   await $.session.start(START)
   await $.prompt.submit({ text: 'Ship it', origin: { kind: 'composer' }, wait: false })
@@ -77,7 +167,7 @@ test('a turn nobody typed carries the job on, and the band leaves when the work 
   await idle.unmount()
 })
 
-test('the pane lists a subagent with its tools, and the files touched under their folder', async ($, on) => {
+test('the pane lists a subagent with its tools, and the files touched under their folder', ON, async ($, on) => {
   world(on)
   await $.session.start(START)
   await $.turn.start({ text: 'Explore', turnId: 'turn-1' })

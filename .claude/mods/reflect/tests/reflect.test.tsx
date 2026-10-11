@@ -55,8 +55,25 @@ function world(on: On, verdict: string): World {
 
 const START = { surface: 'terminal', isInteractive: true, cwd: '/work/shop' } as const
 const typed = (text: string) => ({ text, origin: { kind: 'composer' }, wait: false }) as const
+// Reflect starts off; these run it as the always switch leaves it.
+const ON = { options: { enabled: true } } as const
 
-test('a correction becomes a rule you can save for the project, and Claude hears it with the next prompt', async ($, on) => {
+test('off until it is switched on: no prompt is sent to a model and nothing is offered', async ($, on) => {
+  const { clock, judged } = world(on, '{"is_rule": true, "rule": "Use pnpm, never npm, in this repository.", "scope": "project", "confidence": 0.9}')
+  await $.session.start(START)
+  await $.prompt.submit(typed("No, don't use npm here, we always use pnpm"))
+  await $.prompt.submit(typed('remember: answer in British English'))
+  await clock.settle()
+
+  expect(judged).toHaveLength(0)
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.findAll({ type: 'Button' })).toHaveLength(0)
+  await ui.unmount()
+  const asked = { command: 'reflect', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 150 } } as const
+  expect((await $.command.run(asked)).text).toBe('Reflect is off here; switch it on in the mods panel, or with /mods reflect on.')
+})
+
+test('a correction becomes a rule you can save for the project, and Claude hears it with the next prompt', ON, async ($, on) => {
   const { clock, files, judged, sent } = world(on, '{"is_rule": true, "rule": "Use pnpm, never npm, in this repository.", "scope": "project", "confidence": 0.9}')
   await $.session.start(START)
   await $.prompt.submit(typed("No, don't use npm here, we always use pnpm"))
@@ -78,7 +95,7 @@ test('a correction becomes a rule you can save for the project, and Claude hears
   expect(sent.at(-1)).toBeUndefined()
 })
 
-test('remember: needs no model, and saving everywhere writes the user rules file', async ($, on) => {
+test('remember: needs no model, and saving everywhere writes the user rules file', ON, async ($, on) => {
   const { clock, files, judged } = world(on, 'not json')
   await $.session.start(START)
   await $.prompt.submit(typed('remember: answer in British English'))
@@ -94,7 +111,7 @@ test('remember: needs no model, and saving everywhere writes the user rules file
   await ui.unmount()
 })
 
-test('an ordinary request, a secret, or a doubtful verdict offers nothing', async ($, on) => {
+test('an ordinary request, a secret, or a doubtful verdict offers nothing', ON, async ($, on) => {
   const { clock, judged } = world(on, '{"is_rule": true, "rule": "Maybe use tabs.", "scope": "project", "confidence": 0.4}')
   await $.session.start(START)
   await $.prompt.submit(typed('add a login page with a form'))
@@ -109,7 +126,7 @@ test('an ordinary request, a secret, or a doubtful verdict offers nothing', asyn
   await ui.unmount()
 })
 
-test('explicit mode only listens for remember:', { options: { detect: 'explicit' } }, async ($, on) => {
+test('explicit mode only listens for remember:', { options: { enabled: true, detect: 'explicit' } }, async ($, on) => {
   const { clock, judged } = world(on, '{"is_rule": true, "rule": "Use pnpm.", "scope": "project", "confidence": 0.9}')
   await $.session.start(START)
   await $.prompt.submit(typed("don't use npm, always use pnpm"))

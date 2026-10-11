@@ -27,7 +27,7 @@
       "title": "Skins",
       "description": "Color each project with the skin picked for it (/skin).",
       "required": false,
-      "default": true
+      "default": false
     },
     "skinsAuto": {
       "type": "boolean",

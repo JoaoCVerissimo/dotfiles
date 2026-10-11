@@ -67,7 +67,7 @@ test('after a turn it pings before the cache expires, and goes on until its wind
   await ui.unmount()
 })
 
-test('off by default: no ping is sent, and the band only says when the cache went cold', async ($, on) => {
+test('off until it is switched on: no ping is sent, asked for or not, and nothing is drawn even once the cache is cold', async ($, on) => {
   const { clock, forks } = world(on, [WARM])
   await $.session.start(START)
   await $.turn.complete(DONE)
@@ -76,11 +76,28 @@ test('off by default: no ping is sent, and the band only says when the cache wen
   const warm = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect(await warm.find({ type: 'Text', text: /keepwarm/ })).toBeUndefined()
   await warm.unmount()
+  const asked = { command: 'keepwarm', args: 'now', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 170 } } as const
+  expect((await $.command.run(asked)).text).toBe('Keep warm is off here; switch it on in the mods panel, or with /mods keepwarm on.')
 
   await clock.advance(45 * MINUTE)
   expect(forks()).toBe(0)
   const cold = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await cold.find({ type: 'Text', text: /cache cold for 15m · the next turn re-reads about 180k tokens/ })).toBeDefined()
+  expect(await cold.find({ type: 'Text', text: /keepwarm/ })).toBeUndefined()
+  expect(await cold.find({ type: 'Text', text: 'engine' })).toBeDefined()
+  await cold.unmount()
+})
+
+test('switched on, it says when the cache has gone cold and what the next turn re-reads', { options: { enabled: true, hours: 1 } }, async ($, on) => {
+  const { clock, forks } = world(on, [WARM])
+  await $.session.start(START)
+  await $.turn.complete(DONE)
+  // One ping at 50 minutes; the hour's window is over before another is due, and the cache then lapses.
+  await clock.advance(51 * MINUTE)
+  await clock.advance(75 * MINUTE)
+
+  expect(forks()).toBe(1)
+  const cold = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await cold.find({ type: 'Text', text: /cache cold for \d+m · the next turn re-reads about 180k tokens/ })).toBeDefined()
   await cold.unmount()
 })
 
@@ -131,4 +148,7 @@ test('a ping is only planned while the cache is alive and the window is open', (
   expect(isWarmRead(0, 43_000)).toBe(false)
   expect(lineOf({ ...watch, nextAt: T0 + 50 * MINUTE }, T0, true, true)?.text).toBe('cache warm, 1h 00m left · next ping in 50m · keeping warm 2h 00m more')
   expect(lineOf(watch, T0, false, true)).toBeNull()
+  // Switched off it has nothing to say, cold cache or not.
+  expect(lineOf(watch, T0 + 61 * MINUTE, true, true)?.tone).toBe('cold')
+  expect(lineOf(watch, T0 + 61 * MINUTE, false, true)).toBeNull()
 })
