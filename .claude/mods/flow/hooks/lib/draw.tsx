@@ -155,7 +155,7 @@ function drawAgents(t: Kit, data: PaneData, act: PaneActions): RenderElement {
 
     return (
       <Box flexDirection="column">
-        <Button key="back" plain hotkey="b" label="‹ back" onPress={() => act.agent(null)} />
+        <Button key="back" plain label="‹ back" onPress={() => act.agent(null)} />
         <Text wrap="wrap">
           <Text color={design.color}>{design.glyph}</Text> <Text bold>{picked.type}</Text>
           {picked.model === '' ? '' : ` · ${picked.model}`}
@@ -307,15 +307,16 @@ export function drawPane(t: Kit, data: PaneData, act: PaneActions): RenderElemen
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" columnGap={2}>
-        {TABS.map((tab, index) => (
-          <Button
-            key={`tab:${tab.id}`}
-            plain
-            hotkey={String(index + 1)}
-            label={`${tab.title}${counts[tab.id]}`}
-            dimColor={view.tab !== tab.id}
-            onPress={() => act.tab(tab.id)}
-          />
+        {TABS.map(tab => (
+          <Button key={`tab:${tab.id}`} plain label={`${tab.title}${counts[tab.id]}`} dimColor={view.tab !== tab.id} onPress={() => act.tab(tab.id)}>
+            {view.tab === tab.id ? (
+              <Text bold color="claude">
+                {`${tab.title}${counts[tab.id]}`}
+              </Text>
+            ) : (
+              `${tab.title}${counts[tab.id]}`
+            )}
+          </Button>
         ))}
         <Box flexGrow={1} />
         <Button key="clear" plain dimColor label="clear" onPress={() => act.clear()} />

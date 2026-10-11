@@ -1,7 +1,7 @@
 {
   "name": "flow",
   "version": "0.1.0",
-  "description": "Shows what Claude is doing: a progress bar and numbered task checklist above the prompt, and a pane with the subagents at work and the files they touch.",
+  "description": "Shows what Claude is doing: a progress bar and numbered task checklist above the prompt, and a pane with the subagents at work and the files they touch. Uses a few tokens: Claude posts its steps through a small tool (none with \"Ask Claude for its steps\" off).",
   "author": {
     "name": "João Veríssimo"
   },

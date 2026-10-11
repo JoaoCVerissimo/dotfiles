@@ -299,7 +299,7 @@ export const register: Register = (on, options) => {
 
       return {}
     }
-    // The page is marked loading before the pane opens, so the pane's keys are its hotkeys and not the address field's.
+    // The page is marked loading before the pane opens, so the pane opens on the page, where the arrows scroll, and not in the address field.
     await update($, page, (old): BrowserPage => ({ ...old, status: 'loading', url: normalizeUrl(address) ?? address, error: '' }))
     await openPane($, true)
     void load($, options, address, false).catch(() => undefined)
@@ -363,18 +363,17 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" columnGap={2} flexWrap="wrap">
-          <Button key="back" plain hotkey="b" label="‹ back" dimColor={look.history.length === 0} onPress={() => void goBack($, options)} />
-          <Button key="reload" plain hotkey="r" label="reload" onPress={() => void load($, options, current.url, true)} />
-          <Button key="preview" plain hotkey="v" label={look.mode === 'text' ? 'preview' : 'text'} onPress={() => void togglePreview($, options)} />
-          <Button key="prompt" plain hotkey="p" label="→ Claude" onPress={() => void toPrompt($)} />
+          <Button key="back" plain label="‹ back" dimColor={look.history.length === 0} onPress={() => void goBack($, options)} />
+          <Button key="reload" plain label="↻ reload" onPress={() => void load($, options, current.url, true)} />
+          <Button key="preview" plain label={look.mode === 'text' ? 'preview' : 'text'} onPress={() => void togglePreview($, options)} />
+          <Button key="prompt" plain label="→ Claude" onPress={() => void toPrompt($)} />
           <Button
             key="open"
             plain
-            hotkey="o"
             label="open"
             onPress={() => void $.process.run(['open', current.url], { timeoutMs: 10_000 }).catch(() => undefined)}
           />
-          <Button key="focus-go" plain hotkey="g" label="go to…" onPress={() => void $.ui.focus({ requestId: PANE, key: 'go' }).catch(() => undefined)} />
+          <Button key="focus-go" plain label="go to…" onPress={() => void $.ui.focus({ requestId: PANE, key: 'go' }).catch(() => undefined)} />
         </Box>
         <Input
           key="go"

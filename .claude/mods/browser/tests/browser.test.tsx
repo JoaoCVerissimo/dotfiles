@@ -65,6 +65,9 @@ test('a page loads through headless Chrome, links follow by number, and back ret
   await ui.input({ key: 'go', text: 'localhost:3000' })
 
   expect(await ui.find({ type: 'Text', text: 'Test & shop' })).toBeDefined()
+  // Nothing here answers a single key: every control is clicked.
+  expect((await ui.findAll({ type: 'Button' })).filter(button => button.props.hotkey !== undefined)).toEqual([])
+  expect(await ui.find({ key: 'reload' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /2 links · via headless Chrome/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /boom: cart failed \(app\.js:3\)/ })).toBeDefined()
   expect((await ui.find({ type: 'Markdown' }))?.props.text).toContain('About us ‹1› Example ‹2› Nope')

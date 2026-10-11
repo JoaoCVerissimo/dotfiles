@@ -1,7 +1,7 @@
 {
   "name": "keepwarm",
   "version": "0.1.0",
-  "description": "Keeps the session's prompt cache warm while you are away with one small request before it expires, for a set number of hours, and tells you when the cache has gone cold.",
+  "description": "Keeps the session's prompt cache warm while you are away with one small request before it expires, for a set number of hours, and tells you when the cache has gone cold. Uses tokens: each ping is a model request that re-reads the conversation at the cached price.",
   "author": { "name": "João Veríssimo" },
   "license": "MIT",
   "keywords": ["prompt-cache", "keep-warm", "cost", "function-hooks"],

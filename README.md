@@ -27,7 +27,7 @@ Only the symlinks, on a machine that already has the tools:
 | `.gitconfig`, `.gitignore_global` | `~/` | defaults, aliases, gh as credential helper; identity is read from `~/.gitconfig.local` |
 | `.ssh/config` | `~/.ssh/config` | config only, never keys |
 | `.config/gh/config.yml` | `~/.config/gh/` | gh aliases; `hosts.yml` (tokens) stays out |
-| `.claude/` | `~/.claude/` | `settings.json`, `CLAUDE.md`, `statusline.sh`, `agents/`, `commands/`, `rules/` |
+| `.claude/` | `~/.claude/` | `settings.json`, `CLAUDE.md`, `statusline.sh`, `agents/`, `commands/` |
 | `.claude/mods/` | — | my Claude Code mods and the panel that switches them; see [its README](.claude/mods/README.md) |
 | `vscode/` | `~/Library/Application Support/Code/User/` | `keybindings.json` is linked; `settings.json` is copied once (see below) |
 | `Brewfile` | — | `brew bundle` manifest: taps, CLIs, apps, VS Code extensions |

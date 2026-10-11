@@ -1,7 +1,7 @@
 {
   "name": "look",
   "version": "0.1.0",
-  "description": "Zen mode hides tool noise while Claude works, and skins give each project its own color palette through a Claude Code theme of its own.",
+  "description": "Zen mode hides tool noise while Claude works, and skins give each project its own color palette through a Claude Code theme of its own. Plain code: no model calls.",
   "author": { "name": "João Veríssimo" },
   "license": "MIT",
   "keywords": ["zen", "themes", "skins", "function-hooks"],

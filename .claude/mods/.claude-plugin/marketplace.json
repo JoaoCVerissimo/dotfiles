@@ -8,32 +8,32 @@
     {
       "name": "mods",
       "source": "./mods",
-      "description": "The mods panel: a switch per mod for this session and for every session, a control center (model, effort, mode, stop), a session switcher and a done alert."
+      "description": "The mods panel: a switch per mod for this session and for every session, a control center (model, effort, mode, stop), a session switcher and a done alert. No tokens."
     },
     {
       "name": "flow",
       "source": "./flow",
-      "description": "A progress bar and numbered task checklist above the prompt, and a pane with the subagents at work and the files they touch."
+      "description": "A progress bar and numbered task checklist above the prompt, and a pane with the subagents at work and the files they touch. Few tokens."
     },
     {
       "name": "look",
       "source": "./look",
-      "description": "Zen mode hides tool noise while Claude works; skins give each project its own color palette."
+      "description": "Zen mode hides tool noise while Claude works; skins give each project its own color palette. No tokens."
     },
     {
       "name": "keepwarm",
       "source": "./keepwarm",
-      "description": "Keeps the prompt cache warm while you are away, and says when it has gone cold."
+      "description": "Keeps the prompt cache warm while you are away, and says when it has gone cold. Uses tokens."
     },
     {
       "name": "reflect",
       "source": "./reflect",
-      "description": "Turns your corrections into one-line rules you can save for the project or for every project."
+      "description": "Turns your corrections into one-line rules you can save for the project or for every project. Few tokens."
     },
     {
       "name": "browser",
       "source": "./browser",
-      "description": "A web page as readable text in a pane, with its console output and a small color preview."
+      "description": "A web page as readable text in a pane, with its console output and a small color preview. No tokens."
     }
   ]
 }

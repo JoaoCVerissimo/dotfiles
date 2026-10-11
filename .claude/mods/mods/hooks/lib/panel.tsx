@@ -11,12 +11,12 @@ import type {
   ModsTurn,
   ModsView,
 } from '../../types'
-import type { External, Feature } from './catalog'
+import type { External, Feature, Usage } from './catalog'
 import {
   EFFORTS,
   EXTERNAL,
   FEATURES,
-  HOTKEYS,
+  USAGE_LABEL,
   ago,
   alwaysOf,
   baseName,
@@ -68,11 +68,36 @@ const TABS: ReadonlyArray<{ id: ModsTab; title: string }> = [
   { id: 'sessions', title: 'Sessions' },
 ]
 
-// The letters that archive a row of the Sessions tab; r and v are that tab's own keys.
-const ROW_KEYS: readonly string[] = [...HOTKEYS].filter(key => key !== 'r' && key !== 'v')
+// Nothing in the panel acts on a single key: a control is clicked, or reached
+// with tab and pressed with enter, so a stray key never switches anything.
+
+// The icon on a session's row that archives it, and the one that brings it back.
+const ARCHIVE_ICON = '⊟'
+const RESTORE_ICON = '⊞'
+const ACTION_MARK = '▸'
+
+const USAGE_COLUMNS = Math.max(...Object.values(USAGE_LABEL).map(label => label.length))
 
 function dot(t: Kit, isOn: boolean): RenderElement {
   return <t.Text color={isOn ? 'success' : 'inactive'}>{isOn ? '●' : '○'}</t.Text>
+}
+
+// What a mod costs, as the short tag its row ends with.
+function usageTag(t: Kit, usage: Usage): RenderElement {
+  const label = USAGE_LABEL[usage.level].padStart(USAGE_COLUMNS)
+
+  return usage.level === 'tokens' ? <t.Text color="warning">{label}</t.Text> : <t.Text dimColor={usage.level === 'none'}>{label}</t.Text>
+}
+
+function usageNote(t: Kit, usage: Usage): RenderElement {
+  return (
+    <t.Box flexDirection="column">
+      {heading(t, 'Usage', USAGE_LABEL[usage.level])}
+      <t.Text dimColor wrap="wrap">
+        {usage.note}
+      </t.Text>
+    </t.Box>
+  )
 }
 
 function heading(t: Kit, title: string, value?: string): RenderElement {
@@ -91,7 +116,7 @@ function drawMods(t: Kit, data: PanelData, act: PanelActions): RenderElement {
 
   return (
     <Box flexDirection="column">
-      {FEATURES.map((feature, index) => {
+      {FEATURES.map(feature => {
         const always = alwaysOf(feature, data.rows)
         const isOn = isOnHere(feature, data.switches, data.rows)
         const override = data.switches[feature.id]
@@ -104,7 +129,7 @@ function drawMods(t: Kit, data: PanelData, act: PanelActions): RenderElement {
 
         return (
           <Box key={`row:${feature.id}`} flexDirection="row" columnGap={1}>
-            <Button key={`here:${feature.id}`} plain hotkey={HOTKEYS[index]} onPress={() => act.here(feature)}>
+            <Button key={`here:${feature.id}`} plain onPress={() => act.here(feature)}>
               {dot(t, isOn)} {feature.title.padEnd(10)}
             </Button>
             <Box flexGrow={1} flexShrink={1}>
@@ -112,24 +137,21 @@ function drawMods(t: Kit, data: PanelData, act: PanelActions): RenderElement {
                 {hint}
               </Text>
             </Box>
-            <Button key={`more:${feature.id}`} plain label="›" onPress={() => act.detail(feature.id)} />
+            <Button key={`more:${feature.id}`} plain onPress={() => act.detail(feature.id)}>
+              {usageTag(t, feature.usage)} ›
+            </Button>
           </Box>
         )
       })}
       <Box marginTop={1}>
         <Text dimColor>from Anthropic · every session</Text>
       </Box>
-      {EXTERNAL.map((external, index) => {
+      {EXTERNAL.map(external => {
         const isOn = data.plugins[external.plugin] === true
 
         return (
           <Box key={`row:${external.id}`} flexDirection="row" columnGap={1}>
-            <Button
-              key={`ext:${external.id}`}
-              plain
-              hotkey={HOTKEYS[FEATURES.length + index]}
-              onPress={() => act.external(external)}
-            >
+            <Button key={`ext:${external.id}`} plain onPress={() => act.external(external)}>
               {dot(t, isOn)} {external.title.padEnd(15)}
             </Button>
             <Box flexGrow={1} flexShrink={1}>
@@ -137,13 +159,15 @@ function drawMods(t: Kit, data: PanelData, act: PanelActions): RenderElement {
                 {external.plugin in data.plugins ? external.blurb : `not installed · ${external.blurb}`}
               </Text>
             </Box>
-            <Button key={`more:${external.id}`} plain label="›" onPress={() => act.detail(external.id)} />
+            <Button key={`more:${external.id}`} plain onPress={() => act.detail(external.id)}>
+              {usageTag(t, external.usage)} ›
+            </Button>
           </Box>
         )
       })}
       <Box marginTop={1}>
         <Text dimColor wrap="wrap">
-          a letter switches a mod for this session · › opens its always switch and settings
+          click a mod's name to switch it for this session · the right side opens its always switch, its settings and what it uses
         </Text>
       </Box>
     </Box>
@@ -208,7 +232,7 @@ function drawDetail(t: Kit, data: PanelData, act: PanelActions, id: string): Ren
   const { Box, Text, Button } = t
   const feature = FEATURES.find(one => one.id === id)
   const external = EXTERNAL.find(one => one.id === id)
-  const back = <Button key="back" plain hotkey="b" label="‹ back" onPress={() => act.detail(null)} />
+  const back = <Button key="back" plain label="‹ back" onPress={() => act.detail(null)} />
 
   if (feature !== undefined) {
     const always = alwaysOf(feature, data.rows)
@@ -221,11 +245,11 @@ function drawDetail(t: Kit, data: PanelData, act: PanelActions, id: string): Ren
         {back}
         {heading(t, feature.title, feature.blurb)}
         <Box flexDirection="row" columnGap={2}>
-          <Button key="here" plain hotkey="h" onPress={() => act.here(feature)}>
+          <Button key="here" plain onPress={() => act.here(feature)}>
             {dot(t, isOn)} this session
           </Button>
           {override !== undefined && (
-            <Button key="follow" plain hotkey="x" dimColor label="follow always" onPress={() => act.follow(feature)} />
+            <Button key="follow" plain dimColor label="follow always" onPress={() => act.follow(feature)} />
           )}
         </Box>
         {always === null ? (
@@ -233,13 +257,14 @@ function drawDetail(t: Kit, data: PanelData, act: PanelActions, id: string): Ren
             {`The ${feature.plugin} mod is not loaded, so it has no always switch. Install or enable it first.`}
           </Text>
         ) : (
-          <Button key="always" plain hotkey="a" onPress={() => act.always(feature)}>
+          <Button key="always" plain onPress={() => act.always(feature)}>
             {dot(t, always)} always, in every session
           </Button>
         )}
         {feature.command !== undefined && always !== null && (
-          <Button key="open" plain hotkey="o" label={`open /${feature.command}`} onPress={() => act.run(feature.command ?? '')} />
+          <Button key="open" plain label={`${ACTION_MARK} open /${feature.command}`} onPress={() => act.run(feature.command ?? '')} />
         )}
+        {usageNote(t, feature.usage)}
         {settings.length > 0 && heading(t, 'Settings')}
         {settings.map(row => drawSetting(t, row, act))}
       </Box>
@@ -253,12 +278,13 @@ function drawDetail(t: Kit, data: PanelData, act: PanelActions, id: string): Ren
       <Box flexDirection="column">
         {back}
         {heading(t, external.title, external.blurb)}
-        <Button key="always" plain hotkey="a" onPress={() => act.external(external)}>
+        <Button key="always" plain onPress={() => act.external(external)}>
           {dot(t, isOn)} on, in every session
         </Button>
         <Text dimColor wrap="wrap">
           {`${external.plugin} ships as it is, so it has no switch of its own for one session.`}
         </Text>
+        {usageNote(t, external.usage)}
         {settings.length > 0 && heading(t, 'Settings')}
         {settings.map(row => drawSetting(t, row, act))}
       </Box>
@@ -283,8 +309,9 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
       {dot(t, isPicked)} {label}
     </Button>
   )
-  const action = (label: string, command: string, hotkey?: string): RenderElement => (
-    <Button key={`run:${command}`} plain hotkey={hotkey} label={label} onPress={() => act.run(command)} />
+  // A command to run now, under the mark that sets a button apart from the words around it.
+  const action = (label: string, command: string): RenderElement => (
+    <Button key={`run:${command}`} plain label={`${ACTION_MARK} ${label}`} onPress={() => act.run(command)} />
   )
 
   return (
@@ -305,8 +332,8 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
       </Box>
       {heading(t, 'Mode', data.live.mode === '' ? 'not seen yet' : data.live.mode)}
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
-        {action('plan mode', 'plan', 'p')}
-        <Button key="ask" plain hotkey="k" onPress={() => act.ask()}>
+        {action('plan mode', 'plan')}
+        <Button key="ask" plain onPress={() => act.ask()}>
           {dot(t, data.prefs.ask)} ask before changes, here
         </Button>
       </Box>
@@ -317,17 +344,17 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
       </Box>
       {heading(t, 'Turn', isWorking ? 'working' : 'idle')}
       <Box paddingLeft={1}>
-        <Button key="stop" plain hotkey="s" dimColor={!isWorking} onPress={() => act.stop()}>
+        <Button key="stop" plain dimColor={!isWorking} onPress={() => act.stop()}>
           <Text color={isWorking ? 'error' : 'inactive'}>■</Text> stop this turn
         </Button>
       </Box>
       {heading(t, 'Do')}
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
-        {action('focus view', 'focus', 'f')}
-        {action('fast mode', 'fast', 't')}
-        {action('context', 'context', 'x')}
-        {action('usage', 'usage', 'u')}
-        {action('recap', 'recap', 'r')}
+        {action('focus view', 'focus')}
+        {action('fast mode', 'fast')}
+        {action('context', 'context')}
+        {action('usage', 'usage')}
+        {action('recap', 'recap')}
         {action('compact', 'compact')}
         {action('new chat', 'clear')}
       </Box>
@@ -362,15 +389,13 @@ function drawSessions(t: Kit, data: PanelData, act: PanelActions): RenderElement
   const archived = new Set(data.prefs.archived)
   const shown = data.roster.rows.filter(row => data.prefs.showArchived || !archived.has(row.key))
   const hidden = data.roster.rows.length - shown.length
-  // The rows that can be archived, each under the next letter in the order drawn.
-  const keyed = shown.filter(row => !row.isSelf)
-  const room = Math.max(12, data.width - 21)
+  const room = Math.max(12, data.width - 12)
 
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" columnGap={2}>
-        <Button key="refresh" plain hotkey="r" label="refresh" onPress={() => act.refreshSessions()} />
-        <Button key="archived" plain hotkey="v" onPress={() => act.showArchived()}>
+        <Button key="refresh" plain label="↻ refresh" onPress={() => act.refreshSessions()} />
+        <Button key="archived" plain onPress={() => act.showArchived()}>
           {dot(t, data.prefs.showArchived)} archived{hidden > 0 ? ` (${hidden})` : ''}
         </Button>
       </Box>
@@ -398,14 +423,7 @@ function drawSessions(t: Kit, data: PanelData, act: PanelActions): RenderElement
                 </Button>
               </Box>
               {!row.isSelf && (
-                <Button
-                  key={`arch:${row.key}`}
-                  plain
-                  hotkey={ROW_KEYS[keyed.indexOf(row)]}
-                  dimColor
-                  label={isArchived ? 'restore' : 'archive'}
-                  onPress={() => act.archive(row)}
-                />
+                <Button key={`arch:${row.key}`} dimColor label={isArchived ? RESTORE_ICON : ARCHIVE_ICON} onPress={() => act.archive(row)} />
               )}
             </Box>
             <Box paddingLeft={2}>
@@ -418,7 +436,7 @@ function drawSessions(t: Kit, data: PanelData, act: PanelActions): RenderElement
       })}
       <Box marginTop={1}>
         <Text dimColor wrap="wrap">
-          enter opens a session: its terminal tab if it has one, else it is resumed here · a row's letter archives it, which only hides the row
+          {`click a session to open it: its terminal tab if it has one, else it is resumed here · ${ARCHIVE_ICON} archives one, which only hides its row · ${RESTORE_ICON} brings it back`}
         </Text>
       </Box>
     </Box>
@@ -440,15 +458,16 @@ export function drawPanel(t: Kit, data: PanelData, act: PanelActions): RenderEle
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" columnGap={2}>
-        {TABS.map((tab, index) => (
-          <Button
-            key={`tab:${tab.id}`}
-            plain
-            hotkey={String(index + 1)}
-            label={tab.title}
-            dimColor={view.tab !== tab.id}
-            onPress={() => act.tab(tab.id)}
-          />
+        {TABS.map(tab => (
+          <Button key={`tab:${tab.id}`} plain label={tab.title} dimColor={view.tab !== tab.id} onPress={() => act.tab(tab.id)}>
+            {view.tab === tab.id ? (
+              <Text bold color="claude">
+                {tab.title}
+              </Text>
+            ) : (
+              tab.title
+            )}
+          </Button>
         ))}
       </Box>
       {data.note !== '' && (

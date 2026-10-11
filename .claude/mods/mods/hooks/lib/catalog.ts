@@ -1,5 +1,13 @@
 import type { ModsRow, ModsSwitches } from '../../types'
 
+// What a mod adds to your usage. `none` is plain code that never calls a
+// model, `few` a small or occasional cost, `tokens` model requests of its own.
+export type Usage = {
+  level: 'none' | 'few' | 'tokens'
+  // the sentence a mod's page shows: what costs, how much, and how to avoid it
+  note: string
+}
+
 // One row of the Mods tab: a switch the person flips. `plugin` and `field`
 // name the userConfig option that holds its always-value (`flow.enabled`).
 export type Feature = {
@@ -8,6 +16,7 @@ export type Feature = {
   field: string
   title: string
   blurb: string
+  usage: Usage
   // the mod's own command, which opens its pane or prints its status
   command?: string
 }
@@ -19,27 +28,119 @@ export type External = {
   plugin: string
   title: string
   blurb: string
+  usage: Usage
 }
 
+// The tag a row ends with; short, so a 50-column pane keeps room for the blurb.
+export const USAGE_LABEL: Readonly<Record<Usage['level'], string>> = { none: 'no tokens', few: 'few tokens', tokens: 'tokens' }
+
 export const FEATURES: readonly Feature[] = [
-  { id: 'flow', plugin: 'flow', field: 'enabled', title: 'Flow', blurb: 'progress bar, task checklist, agents, files', command: 'flow' },
-  { id: 'zen', plugin: 'look', field: 'zen', title: 'Zen', blurb: 'hide tool noise while Claude works' },
-  { id: 'skins', plugin: 'look', field: 'skins', title: 'Skins', blurb: 'a color palette per project', command: 'skin' },
-  { id: 'keepwarm', plugin: 'keepwarm', field: 'enabled', title: 'Keep warm', blurb: 'ping the prompt cache while you are away', command: 'keepwarm' },
-  { id: 'reflect', plugin: 'reflect', field: 'enabled', title: 'Reflect', blurb: 'turn your corrections into saved rules', command: 'reflect' },
-  { id: 'browser', plugin: 'browser', field: 'enabled', title: 'Browser', blurb: 'read a web page in a pane', command: 'browser' },
-  { id: 'alert', plugin: 'mods', field: 'alert', title: 'Done alert', blurb: 'sound or notification when a turn ends' },
+  {
+    id: 'flow',
+    plugin: 'flow',
+    field: 'enabled',
+    title: 'Flow',
+    blurb: 'progress, tasks, agents',
+    command: 'flow',
+    usage: {
+      level: 'few',
+      note: 'Claude posts its steps through a small tool: a short tool call when a step starts or ends, plus the tool\'s definition and one sentence in the system prompt. With "Ask Claude for its steps" off, Flow is plain code and uses none.',
+    },
+  },
+  {
+    id: 'zen',
+    plugin: 'look',
+    field: 'zen',
+    title: 'Zen',
+    blurb: 'hide tool noise',
+    usage: { level: 'none', note: 'Plain code: it only changes what the transcript shows.' },
+  },
+  {
+    id: 'skins',
+    plugin: 'look',
+    field: 'skins',
+    title: 'Skins',
+    blurb: 'a palette per project',
+    command: 'skin',
+    usage: { level: 'none', note: 'Plain code: it writes a theme file and one line in the project\'s local settings.' },
+  },
+  {
+    id: 'keepwarm',
+    plugin: 'keepwarm',
+    field: 'enabled',
+    title: 'Keep warm',
+    blurb: 'ping the prompt cache',
+    command: 'keepwarm',
+    usage: {
+      level: 'tokens',
+      note: 'Each ping is a model request that re-reads the whole conversation at the cached price (about a tenth of normal input) for a one-word reply: one every 50 minutes with a 1-hour cache, every 4 with a 5-minute one, for the hours you set after your last turn.',
+    },
+  },
+  {
+    id: 'reflect',
+    plugin: 'reflect',
+    field: 'enabled',
+    title: 'Reflect',
+    blurb: 'corrections into rules',
+    command: 'reflect',
+    usage: {
+      level: 'few',
+      note: 'One small Haiku call (under a thousand tokens) when a prompt reads like a correction or a preference; none for "remember:" or for any other prompt. With "What to look at" on explicit it never calls a model. A saved rule is then one line in the context of later sessions.',
+    },
+  },
+  {
+    id: 'browser',
+    plugin: 'browser',
+    field: 'enabled',
+    title: 'Browser',
+    blurb: 'web pages in a pane',
+    command: 'browser',
+    usage: {
+      level: 'none',
+      note: 'Plain code: pages load in headless Chrome and become text on this machine. Only what you hand to Claude costs: "→ Claude" attaches the page (up to 20,000 characters, about 5,000 tokens) to your next prompt, and "Let Claude open pages" (off) gives Claude a tool whose pages it reads.',
+    },
+  },
+  {
+    id: 'alert',
+    plugin: 'mods',
+    field: 'alert',
+    title: 'Done alert',
+    blurb: 'sound when a turn ends',
+    usage: { level: 'none', note: 'Plain code: a sound and a notification from this machine.' },
+  },
 ]
 
 export const EXTERNAL: readonly External[] = [
-  { id: 'next-steps', plugin: 'next-steps@claude-community', title: 'Next steps', blurb: 'suggested next prompts after each turn' },
-  { id: 'blast-radius', plugin: 'blast-radius@claude-code-playground-mods', title: 'Blast radius', blurb: 'hold risky shell commands until you decide' },
-  { id: 'you-should-know', plugin: 'cc-plugin-you-should-know@builtin', title: 'You should know', blurb: 'notes on things you might miss' },
+  {
+    id: 'next-steps',
+    plugin: 'next-steps@claude-community',
+    title: 'Next steps',
+    blurb: 'suggested prompts',
+    usage: {
+      level: 'tokens',
+      note: 'One extra model request after each turn that ends in an answer of 80 characters or more: it re-reads the conversation at the cached price and writes up to three short suggestions.',
+    },
+  },
+  {
+    id: 'blast-radius',
+    plugin: 'blast-radius@claude-code-playground-mods',
+    title: 'Blast radius',
+    blurb: 'hold risky commands',
+    usage: { level: 'none', note: 'Plain code: it matches the command against patterns and looks things up with git and the shell on this machine.' },
+  },
+  {
+    id: 'you-should-know',
+    plugin: 'cc-plugin-you-should-know@builtin',
+    title: 'You should know',
+    blurb: 'what you might miss',
+    usage: {
+      level: 'tokens',
+      note: 'Runs a side agent, so model requests of its own, while Claude works on longer tasks. It is built into Claude Code, and Anthropic does not say how much it uses.',
+    },
+  },
 ]
 
 export const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max', 'auto']
-
-export const HOTKEYS = 'abcdefghijklmnopqrstuvwxyz'
 
 export function rowOf(rows: readonly ModsRow[], key: string): ModsRow | undefined {
   return rows.find(row => row.key === key)

@@ -55,7 +55,7 @@ function typed(command: string, args: string) {
 
 const START = { surface: 'terminal', isInteractive: true, cwd: '/work/app' } as const
 
-test('a letter switches a mod on for this session, and the page shows its always switch', async ($, on) => {
+test('a click on a mod switches it for this session, and its page shows the always switch and what it uses', async ($, on) => {
   world(on)
   await $.session.start(START)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
@@ -63,10 +63,15 @@ test('a letter switches a mod on for this session, and the page shows its always
   expect((await ui.find({ key: 'here:zen' }))?.text).toContain('○')
   await ui.press({ key: 'here:zen' })
   expect((await ui.find({ key: 'here:zen' }))?.text).toContain('●')
+  // Each row ends with what the mod adds to your usage.
+  expect((await ui.find({ key: 'more:zen' }))?.text).toContain('no tokens')
+  expect((await ui.find({ key: 'more:keepwarm' }))?.text).toMatch(/^\s*tokens ›$/)
+  expect((await ui.find({ key: 'more:blast-radius' }))?.text).toContain('no tokens')
 
   await ui.press({ key: 'more:zen' })
   expect((await ui.find({ key: 'here' }))?.text).toContain('●')
   expect((await ui.find({ key: 'always' }))?.text).toContain('○')
+  expect(await ui.find({ type: 'Text', text: 'Plain code: it only changes what the transcript shows.' })).toBeDefined()
   // Zen's page lists Zen's options and none of Skins'.
   expect(await ui.find({ key: 'set:look.zenErrors' })).toBeDefined()
   expect(await ui.find({ key: 'set:look.skins' })).toBeUndefined()
@@ -156,33 +161,68 @@ test('the hint line carries the quick buttons, and a stop button while a turn ru
   await busy.unmount()
 })
 
-test('a row\'s letter archives a session, and the archived list brings it back', async ($, on) => {
-  const agents = [
-    { pid: 11, cwd: '/work/api', kind: 'interactive', startedAt: 100, sessionId: 'a', name: 'api-1', status: 'idle' },
-    { pid: 12, cwd: '/work/app', kind: 'interactive', startedAt: 200, sessionId: 'self-session', name: 'app-2', status: 'busy' },
-    { pid: 13, cwd: '/work/web', kind: 'interactive', startedAt: 300, sessionId: 'c', name: 'web-3', status: 'idle' },
-  ]
-  world(on, [], argv => (argv.includes('agents') ? JSON.stringify(agents) : ''))
+// Three sessions on this machine as `claude agents --json --all` prints them; the middle one is this session.
+const AGENTS = [
+  { pid: 11, cwd: '/work/api', kind: 'interactive', startedAt: 100, sessionId: 'a', name: 'api-1', status: 'idle' },
+  { pid: 12, cwd: '/work/app', kind: 'interactive', startedAt: 200, sessionId: 'self-session', name: 'app-2', status: 'busy' },
+  { pid: 13, cwd: '/work/web', kind: 'interactive', startedAt: 300, sessionId: 'c', name: 'web-3', status: 'idle' },
+]
+
+function withSessions(on: On): void {
+  world(on, [], argv => (argv.includes('agents') ? JSON.stringify(AGENTS) : ''))
   on('fs.read', () => ({ value: '' }))
   on('fs.list', () => ({ value: [] }))
+}
+
+test('the icon on a session\'s row archives it, and the archived list brings it back', async ($, on) => {
+  withSessions(on)
   await $.session.start(START)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'tab:sessions' })
 
-  // Every other session has a letter; this one cannot be archived from itself.
-  const letters = (await ui.findAll({ type: 'Button', text: 'archive' })).filter(button => button.key?.startsWith('arch:')).map(button => button.props.hotkey)
-  expect(letters).toEqual(['a', 'b'])
+  // Every other session has the icon; this one cannot be archived from itself.
+  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('⊟')
+  expect((await ui.find({ key: 'arch:c' }))?.props.label).toBe('⊟')
   expect(await ui.find({ key: 'arch:self-session' })).toBeUndefined()
 
   await ui.press({ key: 'arch:a' })
   expect(await ui.find({ key: 'open:a' })).toBeUndefined()
   expect((await ui.find({ key: 'archived' }))?.text).toContain('(1)')
+  // One click hid a row, so the panel says so and how to get it back.
+  expect(await ui.find({ type: 'Text', text: 'Archived api-1: it is only hidden' })).toBeDefined()
 
   await ui.press({ key: 'archived' })
-  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('restore')
+  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('⊞')
   await ui.press({ key: 'arch:a' })
-  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('archive')
+  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('⊟')
   await ui.unmount()
+})
+
+test('no control in the panel answers a single key', async ($, on) => {
+  withSessions(on)
+  await $.session.start(START)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  // The buttons a page draws, and those among them a key would press.
+  const page = async () => {
+    const buttons = await ui.findAll({ type: 'Button' })
+
+    return { count: buttons.length, keyed: buttons.filter(button => button.props.hotkey !== undefined || button.props.action !== undefined).map(button => button.key) }
+  }
+
+  for (const open of [[], ['more:flow'], ['back', 'more:next-steps'], ['tab:control'], ['tab:sessions']]) {
+    for (const key of open) {
+      await ui.press({ key })
+    }
+    const drawn = await page()
+    expect(drawn.count > 3, `buttons after ${open.join(', ') || 'opening'}`).toBe(true)
+    expect(drawn.keyed).toEqual([])
+  }
+  await ui.unmount()
+
+  const hint = { plugin: 'mods', component: 'PromptHint', viewport: { columns: 150, rows: 40 } } as const
+  const chips = await $.ui.mount({ ...hint, surface: 'terminal', props: { isDraft: false, isWorking: true, hint: 'esc to interrupt' } })
+  expect((await chips.findAll({ type: 'Button' })).filter(button => button.props.hotkey !== undefined)).toEqual([])
+  await chips.unmount()
 })
 
 test('words after /mods are read as a tab, a stop or a switch', () => {

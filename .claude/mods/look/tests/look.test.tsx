@@ -73,6 +73,8 @@ test('picking a skin writes the project\'s theme file and names it in the projec
   await $.session.start(START)
   const slug = slugOf('/work/shop')
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  // Nothing here answers a single key: every control is clicked.
+  expect((await ui.findAll({ type: 'Button' })).filter(button => button.props.hotkey !== undefined)).toEqual([])
   await ui.press({ key: 'skin:ocean' })
 
   const theme = JSON.parse(files.get(`/home/me/.claude/themes/${slug}.json`) ?? '{}')

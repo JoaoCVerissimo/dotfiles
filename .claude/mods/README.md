@@ -12,38 +12,71 @@ Needs Claude Code 2.1.296 or later, in a terminal (the fullscreen renderer docks
 
 ## The panel
 
-`/mods`, or the `◆ mods · control · sessions` buttons on the hint line under the prompt. Esc hands the keys back to the prompt.
+`/mods`, or the `◆ mods · control · sessions` buttons on the hint line under the prompt. The `✕` on the pane closes it.
+
+Everything is clicked (or reached with Tab and pressed with Enter). **No key acts on a single press**, in the panel or in any
+mod here, so a stray key never switches anything: with a pane open, what you type still goes to the prompt.
 
 | Tab | What it does |
 | --- | --- |
-| **Mods** | One row per mod. Its letter switches it **for this session**; `›` opens its page with the **always** switch (every session) and its settings. Always-switches and settings are Claude Code's own plugin options, so they land in `settings.json` (`pluginConfigs`). Anthropic's mods switch whole, for every session. |
+| **Mods** | One row per mod. Click its name to switch it **for this session**. The right side of the row says what the mod adds to your usage and opens its page: the **always** switch (every session), the usage note, and its settings. Always-switches and settings are Claude Code's own plugin options, so they land in `settings.json` (`pluginConfigs`). Anthropic's mods switch whole, for every session. |
 | **Control** | Model and effort (run `/model`, `/effort`), plan mode, **ask before changes** (the real permission prompt for every edit, command and fetch in this session, whatever mode it is in), **stop this turn**, and `/focus`, `/fast`, `/context`, `/usage`, `/recap`, `/compact`, `/clear`, rename. |
-| **Sessions** | Every session on this machine, live ones first (green dot), then this project's past conversations. Enter brings a session's terminal tab to the front, or resumes it here. The letter on a row **archives** it: that hides the row and touches nothing else (`v` shows the hidden rows, where the letter restores one). |
+| **Sessions** | Every session on this machine, live ones first (green dot), then this project's past conversations. Click one to bring its terminal tab to the front, or to resume it here. The `[ ⊟ ]` icon on a row **archives** it: that hides the row and touches nothing else. *archived* shows the hidden rows, where `[ ⊞ ]` brings one back. |
 
 Also from the command line: `/mods zen on`, `/mods keepwarm off always`, `/mods stop`, `/mods sessions`.
 
 ## The mods
 
-| Mod | Folder | What it does | Starts |
-| --- | --- | --- | --- |
-| **Flow** | `flow/` | While Claude works, a band above the prompt: the prompt it is on, a progress bar, the steps by number with a mark that fills in as each is done, and the subagents at work. `/flow` opens a pane with the subagents (each type under its own mark, with its recent tool calls and what it reported), the files touched by folder, and the whole task list. Claude posts its steps through a small tool the mod gives it. | on |
-| **Zen** | `look/` | Hides tool calls and their output in the transcript; a failed call still shows. `/mods zen` toggles it. | off |
-| **Skins** | `look/` | A color palette per project, as a Claude Code theme of the project's own. `/skin` opens the picker, `/skin ocean` picks by name. The first pick shows from the next session started in that project; after that a pick recolors the running session at once. | on |
-| **Keep warm** | `keepwarm/` | After each turn, one small request shortly before the prompt cache would expire, for the next two hours, so coming back does not re-read the whole context at full price. Shows what each ping read and paid, stops when a ping finds the cache gone, and says when the cache is cold. `/keepwarm` for status, `/keepwarm now` to ping. | off |
-| **Reflect** | `reflect/` | When a prompt reads like a correction or a preference, or starts with `remember:`, words it as a one-line rule and offers it above the prompt: `7` saves it for this project (`CLAUDE.local.md`), `8` for every project (`~/.claude/rules/learned.md`), `9` skips. | on |
-| **Browser** | `browser/` | `/browser localhost:3000` shows a page as text in a pane: numbered links, console output, back, reload, a small color preview, and a button that hands the page to Claude with your next prompt. Pages load in headless Chrome. | on |
-| **Done alert** | `mods/` | A sound and a notification when a turn that took a while ends. | on |
-| Next steps | Anthropic | Up to three suggested next prompts after each turn: `1` `2` `3` to take one, `0` to dismiss. | on |
-| Blast radius | Anthropic | Holds a risky shell command (`rm -rf`, `git reset --hard`, a force push, a migration) and shows what it would change. | **off** |
-| You should know | built in | A side agent that points out things you might miss on longer tasks. | on |
+| Mod | Folder | What it does | Starts | Extra usage |
+| --- | --- | --- | --- | --- |
+| **Flow** | `flow/` | While Claude works, a band above the prompt: the prompt it is on, a progress bar, the steps by number with a mark that fills in as each is done, and the subagents at work. `/flow` opens a pane with the subagents (each type under its own mark, with its recent tool calls and what it reported), the files touched by folder, and the whole task list. Claude posts its steps through a small tool the mod gives it. | on | few tokens |
+| **Zen** | `look/` | Hides tool calls and their output in the transcript; a failed call still shows. `/mods zen` toggles it. | off | none |
+| **Skins** | `look/` | A color palette per project, as a Claude Code theme of the project's own. `/skin` opens the picker, `/skin ocean` picks by name. The first pick shows from the next session started in that project; after that a pick recolors the running session at once. | on | none |
+| **Keep warm** | `keepwarm/` | After each turn, one small request shortly before the prompt cache would expire, for the next two hours, so coming back does not re-read the whole context at full price. Shows what each ping read and paid, stops when a ping finds the cache gone, and says when the cache is cold. `/keepwarm` for status, `/keepwarm now` to ping. | off | **tokens** |
+| **Reflect** | `reflect/` | When a prompt reads like a correction or a preference, or starts with `remember:`, words it as a one-line rule and offers it above the prompt with three buttons: save for this project (`CLAUDE.local.md`), save everywhere (`~/.claude/rules/learned.md`), or skip. | on | few tokens |
+| **Browser** | `browser/` | `/browser localhost:3000` shows a page as text in a pane: numbered links, console output, back, reload, a small color preview, and a button that hands the page to Claude with your next prompt. Pages load in headless Chrome. | on | none |
+| **Done alert** | `mods/` | A sound and a notification when a turn that took a while ends. | on | none |
+| Next steps | Anthropic | Up to three suggested next prompts after each turn. Its number keys are Anthropic's own: `1` `2` `3` put a suggestion in the prompt box as a draft (nothing is sent until you press Enter), `0` dismisses. | on | **tokens** |
+| Blast radius | Anthropic | Holds a risky shell command (`rm -rf`, `git reset --hard`, a force push, a migration) and shows what it would change. | **off** | none |
+| You should know | built in | A side agent that points out things you might miss on longer tasks. | on | **tokens** |
+
+## What uses tokens
+
+The panel shows this on every row (`no tokens`, `few tokens`, `tokens`) and spells it out on each mod's page.
+
+**Plain code, no model call:** Zen, Skins, Done alert, Blast radius, the Browser while you browse, and the panel itself
+(switches, control center, session list). The Control tab's buttons run the commands you would type, so `/compact` and
+`/recap` cost what they always cost.
+
+**A few tokens:**
+
+- **Flow**: the steps tool's definition and one sentence in the system prompt, plus a short tool call each time a step
+  starts or ends. Switch *Ask Claude for its steps* off and Flow is plain code.
+- **Reflect**: one small Haiku call (under a thousand tokens) when a prompt reads like a correction or a preference. None
+  for `remember:` or any other prompt, and none at all with *What to look at* on `explicit`. A saved rule is then one line
+  in the context of later sessions.
+- **Browser**, only when you ask: *→ Claude* attaches the page to your next prompt (up to 20,000 characters, about 5,000
+  tokens), and *Let Claude open pages* (off) gives Claude a tool whose pages it reads.
+
+**Model requests of their own:**
+
+- **Next steps**: one extra request after each turn that ends in an answer of 80 characters or more. It re-reads the
+  conversation at the cached price and writes up to three short suggestions.
+- **You should know**: a side agent while Claude works on longer tasks. It is built into Claude Code, and Anthropic does
+  not say how much it uses.
+- **Keep warm** (off until you switch it on): each ping re-reads the whole conversation at the cached price, about a
+  tenth of normal input, for a one-word reply. One ping every 50 minutes with a 1-hour cache, every 4 minutes with a
+  5-minute one, for the hours you set after your last turn.
 
 ## Things worth knowing
 
-- **Keep warm spends usage while you are away.** Each ping re-reads the whole context at the cache-read rate. It is off until you switch it on, and a session only pings for the hours you set.
-- **Reflect makes one small model call** (Haiku by default) for a prompt that reads like a correction; the prompt and the end of Claude's last reply go to that model. Set *What to look at* to `explicit` to only take `remember:`.
-- **Rules saved for every project are committed with this repo**: `~/.claude/rules` is a link into `.claude/rules/`. Read `learned.md` before you push.
+- **Reflect never edits a `CLAUDE.md`.** A rule for one project goes to that project's `CLAUDE.local.md`, which is yours
+  alone (the mod lists it in the repository's own exclude file). A rule for every project goes to
+  `~/.claude/rules/learned.md`, which Claude Code reads in every project. That file stays on this machine: to carry the
+  rules between machines, link `~/.claude/rules` into this repo the way `install.sh` links `agents/` and `commands/`.
+- **Reflect sends the prompt it words to a model** (Haiku by default), with the end of Claude's last reply. Set *What to
+  look at* to `explicit` to only take `remember:`.
 - **Skins write two small files**: a theme in `~/.claude/themes/` and a `theme` line in the project's `.claude/settings.local.json` (git-ignored globally here).
-- **Flow adds one tool and one sentence to the system prompt** so Claude posts its steps. Switch *Ask Claude for its steps* off to track only what Claude does by itself.
 - In a session that draws nowhere these mods can show (the VS Code panel, `claude -p`), Flow, Reflect, Keep warm and the alert stay out of the way.
 - The mods depend on the panel (`mods`): it holds the switches they read.
 
@@ -51,3 +84,4 @@ Also from the command line: `/mods zen on`, `/mods keepwarm off always`, `/mods 
 
 Each mod is a plugin: `.claude-plugin/plugin.json` (its options), `hooks/register.tsx` (every hook and every call on the engine),
 `hooks/lib/` (plain logic and drawing, no engine calls), `types/index.d.ts` (the state it keeps for a session) and `tests/`.
+What each mod adds to your usage is written once, in `mods/hooks/lib/catalog.ts`, which the panel reads.

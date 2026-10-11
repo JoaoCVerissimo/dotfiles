@@ -18,7 +18,6 @@ import type { LookProject } from '../types'
 import { SKINS, autoSkin, baseName, skinOf, slugOf, themeIn, themeOf, withTheme } from './lib/skins'
 
 const PANE = 'look'
-const HOTKEYS = 'abcdefghijklmnopqrstuvw'
 const NONE: LookProject = { root: '', slug: '', skin: '', isLive: false, note: '' }
 
 const project = atom({ plugin: 'look', key: 'project' } as const, NONE)
@@ -230,9 +229,9 @@ export const register: Register = (on, options) => {
         </Text>
         {!isOn && <Text color="warning">Skins are switched off, so the project shows the plain theme.</Text>}
         <Box flexDirection="column" marginTop={1}>
-          {SKINS.map((skin, index) => (
+          {SKINS.map(skin => (
             <Box flexDirection="row" columnGap={1}>
-              <Button key={`skin:${skin.id}`} plain hotkey={HOTKEYS[index]} onPress={() => void pick($, options, skin.id)}>
+              <Button key={`skin:${skin.id}`} plain onPress={() => void pick($, options, skin.id)}>
                 <Text color={current.skin === skin.id ? 'success' : 'inactive'}>{current.skin === skin.id ? '●' : '○'}</Text>{' '}
                 {skin.title.padEnd(8)}
               </Button>
@@ -241,7 +240,7 @@ export const register: Register = (on, options) => {
               <Text backgroundColor={skin.surface}>{' you '}</Text>
             </Box>
           ))}
-          <Button key="skin:none" plain hotkey="x" onPress={() => void pick($, options, '')}>
+          <Button key="skin:none" plain onPress={() => void pick($, options, '')}>
             <Text color={current.skin === '' ? 'success' : 'inactive'}>{current.skin === '' ? '●' : '○'}</Text> none
           </Button>
         </Box>

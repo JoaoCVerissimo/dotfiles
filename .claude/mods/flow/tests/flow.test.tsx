@@ -97,6 +97,8 @@ test('the pane lists a subagent with its tools, and the files touched under thei
   await $.turn.complete({ answer: 'Found one file.', durationMs: 900, isAborted: false, turnId: 'turn-9', reason: 'answer', agentId: 'agent-1' })
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  // Nothing here answers a single key: every control is clicked.
+  expect((await ui.findAll({ type: 'Button' })).filter(button => button.props.hotkey !== undefined)).toEqual([])
   expect((await ui.find({ key: 'agent:agent-1' }))?.text).toContain('Explore')
   expect(await ui.find({ type: 'Text', text: /done · 1 tool/ })).toBeDefined()
   await ui.press({ key: 'agent:agent-1' })

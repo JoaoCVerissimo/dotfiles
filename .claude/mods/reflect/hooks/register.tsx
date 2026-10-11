@@ -5,8 +5,9 @@
 // words it as a one-line rule and offers it above the prompt. You decide:
 // save it for this project (CLAUDE.local.md, yours alone), save it for every
 // project (~/.claude/rules/learned.md), or skip it. Nothing is written until
-// you press, and a saved rule is handed to Claude with your next prompt so
-// this session follows it too.
+// you click one of the three, and no key answers the offer, so typing a prompt
+// never saves a rule by accident. A saved rule is handed to Claude with your
+// next prompt so this session follows it too.
 //
 // A prompt is only looked at when it is short, typed by you, free of
 // anything secret-shaped and worded like a preference; then one small model
@@ -217,10 +218,10 @@ export const register: Register = (on, options) => {
             <Text color="claude">◆</Text> <Text dimColor>reflect</Text> {`“${item.rule}”`}
             {list.length > 1 && <Text dimColor>{` +${list.length - 1} more`}</Text>}
           </Text>
-          <Box flexDirection="row" columnGap={2} paddingLeft={2}>
-            <Button key="reflect:project" plain hotkey="7" label="save for this project" onPress={() => void save($, item, 'project')} />
-            <Button key="reflect:global" plain hotkey="8" label="save everywhere" onPress={() => void save($, item, 'global')} />
-            <Button key="reflect:skip" plain hotkey="9" dimColor label="skip" onPress={() => void settle($, item.id)} />
+          <Box flexDirection="row" flexWrap="wrap" columnGap={1} paddingLeft={2}>
+            <Button key="reflect:project" label="save for this project" onPress={() => void save($, item, 'project')} />
+            <Button key="reflect:global" label="save everywhere" onPress={() => void save($, item, 'global')} />
+            <Button key="reflect:skip" dimColor label="skip" onPress={() => void settle($, item.id)} />
           </Box>
         </Box>
       </Box>

@@ -86,6 +86,9 @@ test('remember: needs no model, and saving everywhere writes the user rules file
 
   expect(judged).toHaveLength(0)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  // Nothing here answers a single key: every control is clicked.
+  expect((await ui.findAll({ type: 'Button' })).filter(button => button.props.hotkey !== undefined)).toEqual([])
+  expect(await ui.findAll({ type: 'Button' })).toHaveLength(3)
   await ui.press({ key: 'reflect:global' })
   expect(files.get('/home/me/.claude/rules/learned.md')).toContain(`${LEARNED_HEADING}\n\n- answer in British English\n`)
   await ui.unmount()

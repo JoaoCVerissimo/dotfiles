@@ -318,9 +318,12 @@ async function toggleArchived($: EngineInterface, row: ModsSessionRow): Promise<
   // Read what the store holds now: another session may have archived since.
   const saved = await $.store.get('archived').catch(() => undefined)
   const held = Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : []
-  const archived = held.includes(row.key) ? held.filter(id => id !== row.key) : [...held, row.key].slice(-500)
+  const isRestore = held.includes(row.key)
+  const archived = isRestore ? held.filter(id => id !== row.key) : [...held, row.key].slice(-500)
   await $.store.set('archived', archived).catch(() => undefined)
   await update($, prefs, old => ({ ...old, archived }))
+  // An archive is one click, so say what it did and how it is undone.
+  await say($, isRestore ? `${row.name} is back in the list.` : `Archived ${row.name}: it is only hidden. Click "archived" to see it again.`)
 }
 
 async function toggleAsk($: EngineInterface): Promise<void> {

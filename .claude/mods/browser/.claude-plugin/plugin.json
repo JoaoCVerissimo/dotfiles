@@ -1,7 +1,7 @@
 {
   "name": "browser",
   "version": "0.1.0",
-  "description": "A pane that shows a web page as readable text, with its console errors and a small color preview: load a URL, follow links, reload, and hand the page to Claude. Pages are loaded with headless Chrome.",
+  "description": "A pane that shows a web page as readable text, with its console errors and a small color preview: load a URL, follow links, reload, and hand the page to Claude. Pages are loaded with headless Chrome. Plain code while you browse: a page costs tokens only when you hand it to Claude.",
   "author": { "name": "João Veríssimo" },
   "license": "MIT",
   "keywords": ["browser", "preview", "localhost", "function-hooks"],
