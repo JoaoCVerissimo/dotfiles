@@ -23,7 +23,7 @@ mod here, so a stray key never switches anything: with a pane open, what you typ
 | Tab | What it does |
 | --- | --- |
 | **Mods** | One row per mod, each off until you switch it. Click its name to switch it **for this session**. The right side of the row says what the mod adds to your usage and opens its page: the **always** switch (every session), the usage note, and its settings. Always-switches and settings are Claude Code's own plugin options, so they land in `settings.json` (`pluginConfigs`). Anthropic's mods switch whole, for every session. |
-| **Control** | Model and effort (run `/model`, `/effort`), plan mode, **ask before changes** (the real permission prompt for every edit, command and fetch in this session, whatever mode it is in), **stop this turn**, and `/focus`, `/fast`, `/context`, `/usage`, `/recap`, `/compact`, `/clear`, rename. |
+| **Control** | The model and the effort this session is on, marked in green, each a click to change: a click runs `/model` or `/effort` for you, so it does what the command does (see below). Then **stop this turn**, and `/focus`, `/fast`, `/context`, `/usage`, `/recap`, `/compact`, `/clear`, rename. The permission mode is not here: a panel cannot switch it, so it stays on shift+tab. |
 | **Sessions** | Every session on this machine, live ones first (green dot), then this project's past conversations. Click one to bring its terminal tab to the front, or to resume it here. The `[ ⊟ ]` icon on a row **archives** it: that hides the row and touches nothing else. *archived* shows the hidden rows, where `[ ⊞ ]` brings one back. |
 
 Also from the command line: `/mods zen on`, `/mods keepwarm off always`, `/mods stop`, `/mods sessions`.
@@ -82,6 +82,14 @@ spells it out on each mod's page.
 
 ## Things worth knowing
 
+- **A model or effort picked in the Control tab is picked the way the command picks it.** Claude Code saves a model
+  set with `/model <name>`, and an effort set with `/effort <level>`, as the default for new sessions; `max` is the one
+  level it keeps to the session. It prints which it did under the command, in the conversation. The effort stays when
+  the model changes, and through `/clear`.
+- **The green mark on the effort is the panel's own bookkeeping.** Claude Code tells a mod the session's model and not
+  its effort, so the panel starts from the level settings keep for the model and follows every `/effort` it sees,
+  clicked or typed. One thing it cannot see is the `/effort` slider's *s, for this session only*: that shows once a turn
+  has run. With *auto*, the level the last turn ran at is written beside it.
 - **Reflect never edits a `CLAUDE.md`, and you choose where each rule goes.** *Save for this project* writes that
   project's `CLAUDE.local.md`, which is yours alone (the mod lists it in the repository's own exclude file). *Save
   everywhere* writes `~/.claude/rules/learned.md`, which Claude Code reads in every project. `install.sh` links that

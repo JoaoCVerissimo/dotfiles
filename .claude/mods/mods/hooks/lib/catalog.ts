@@ -1,4 +1,4 @@
-import type { ModsRow, ModsSwitches } from '../../types'
+import type { ModsLive, ModsRow, ModsSwitches } from '../../types'
 
 // What a mod adds to your usage. `none` is plain code that never calls a
 // model, `few` a small or occasional cost, `tokens` model requests of its own.
@@ -141,6 +141,66 @@ export const EXTERNAL: readonly External[] = [
 ]
 
 export const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max', 'auto']
+
+// Which of /model's options the session is on. The engine's row holds the
+// pick as it was made (`sonnet`, `opus[1m]`), its own words for the default,
+// or the full id that settings or --model named, which is matched by family.
+export function pickedModel(row: ModsRow | undefined): string {
+  if (row === undefined) {
+    return ''
+  }
+  const value = String(row.value)
+  if (row.options.includes(value)) {
+    return value
+  }
+  if (/^default\b/i.test(value)) {
+    return row.options.includes('default') ? 'default' : ''
+  }
+  const words = value.toLowerCase().replace(/\[.*$/, '').split('-')
+  const family = row.options.find(option => words.includes(option))
+  const wide = `${family}[1m]`
+
+  return family === undefined ? '' : /\[1m\]$/i.test(value) && row.options.includes(wide) ? wide : family
+}
+
+// The effort settings keep for a model, which a session starts at: auto
+// (the model's own default) where they keep none.
+export function savedEffort(settings: Readonly<Record<string, unknown>>, model: string): string {
+  const all = settings.modelSettings
+  const mine = typeof all === 'object' && all !== null ? (all as Record<string, unknown>)[model.replace(/\[.*$/, '')] : undefined
+  const level = typeof mine === 'object' && mine !== null ? (mine as { effortLevel?: unknown }).effortLevel : undefined
+
+  return typeof level === 'string' && EFFORTS.includes(level) ? level : 'auto'
+}
+
+// The level an /effort run set: the one its answer names (the engine may set
+// a lower one than was asked), else the word after the command. Typed, it
+// answers nothing a hook is shown, and its slider takes no word either.
+export function effortNamed(args: string, answer: string): string {
+  const said = /effort level (?:set )?to (\w+)/i.exec(answer)?.[1]?.toLowerCase() ?? ''
+  if (EFFORTS.includes(said)) {
+    return said
+  }
+  const typed = args.trim().toLowerCase()
+
+  return EFFORTS.includes(typed) ? typed : ''
+}
+
+// What the Control tab holds once a turn has run at `level`. A picked level
+// gives way to it: the engine lowers one the model cannot run, and its slider
+// can set one for the session without a hook seeing which. Auto stays picked,
+// with the level it came to beside it.
+export function afterTurn(live: ModsLive, level: string): ModsLive {
+  const effort = live.effort === 'auto' ? 'auto' : level
+
+  return live.effort === effort && live.ran === level ? live : { ...live, effort, ran: level }
+}
+
+// The effort as the Control tab words it: what the session is set to, and
+// what the last turn ran at where that is something else.
+export function effortLine(live: ModsLive): string {
+  return live.ran === '' || live.ran === live.effort ? live.effort : `${live.effort} · last turn ran at ${live.ran}`
+}
 
 export function rowOf(rows: readonly ModsRow[], key: string): ModsRow | undefined {
   return rows.find(row => row.key === key)

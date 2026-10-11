@@ -3,10 +3,10 @@
 // Three tabs in one pane. Mods lists every mod with a switch for this session
 // (kept in `switches`, which the other mods read) and, on its page, a switch
 // for every session and its settings (the engine's own /config rows, so they
-// land in settings.json). Control runs the commands one would otherwise type:
-// model, effort, plan mode, stop. Sessions lists the sessions on this machine
-// and opens one. With the done alert on, a turn that took a while ends with a
-// sound and a notification.
+// land in settings.json). Control runs the commands one would otherwise type
+// (model, effort, stop) and marks what the session is set to. Sessions lists
+// the sessions on this machine and opens one. With the done alert on, a turn
+// that took a while ends with a sound and a notification.
 //
 // The panel is the one thing that starts on: every mod it lists starts off,
 // and does nothing until its switch is flipped here.
@@ -16,7 +16,7 @@ import type { ConfigRow, EngineInterface, PluginOptions, Register } from 'claude
 
 import type { ModsRow, ModsSessionRow, ModsTab } from '../types'
 import type { External, Feature } from './lib/catalog'
-import { EXTERNAL, FEATURES, alwaysOf, baseName, isOnHere, parseAsk, took } from './lib/catalog'
+import { EXTERNAL, FEATURES, afterTurn, alwaysOf, baseName, effortNamed, isOnHere, parseAsk, savedEffort, took } from './lib/catalog'
 import type { PanelActions } from './lib/panel'
 import { drawChips, drawPanel } from './lib/panel'
 import type { Past } from './lib/sessions'
@@ -24,19 +24,17 @@ import { buildRoster, focusScript, openingOf, parseJson, parseTitles, parseTtys,
 
 const PANE = 'mods'
 const USAGE = 'Usage: /mods [control|sessions|stop|close] or /mods <mod> [on|off|default] [always]'
-// The tools ask mode holds for the person: what changes files, runs commands or leaves the machine.
-const ASKS_FOR = new Set(['Bash', 'Edit', 'Write', 'NotebookEdit', 'WebFetch'])
 const TITLES = '"(customTitle|aiTitle)":"([^"\\\\]|\\\\.)*"'
 const PAST_SHOWN = 8
 
 const switches = atom({ plugin: 'mods', key: 'switches' } as const, {})
 const view = atom({ plugin: 'mods', key: 'view' } as const, { tab: 'mods', detail: null })
 const turn = atom({ plugin: 'mods', key: 'turn' } as const, null)
-const live = atom({ plugin: 'mods', key: 'live' } as const, { mode: '', model: '', effort: '' })
+const live = atom({ plugin: 'mods', key: 'live' } as const, { model: '', effort: '', ran: '' })
 const rows = atom({ plugin: 'mods', key: 'rows' } as const, [])
 const plugins = atom({ plugin: 'mods', key: 'plugins' } as const, {})
 const roster = atom({ plugin: 'mods', key: 'roster' } as const, { at: 0, rows: [], error: '' })
-const prefs = atom({ plugin: 'mods', key: 'prefs' } as const, { archived: [], showArchived: false, ask: false })
+const prefs = atom({ plugin: 'mods', key: 'prefs' } as const, { archived: [], showArchived: false })
 const note = atom({ plugin: 'mods', key: 'note' } as const, '')
 
 // Read once at session start; a reload reads them again.
@@ -44,9 +42,14 @@ let home = ''
 let configDir = ''
 let program = ''
 let selfId = ''
-let isAsking = false
 // Whether a person is at this session's own screen: a terminal or the desktop app.
 let canDraw = false
+// The effort the session is set to, as far as the panel knows. The engine keeps
+// it through /clear, which empties the state above, so it is kept here as well.
+let known = ''
+// Whether the effort changed since the last turn began: a turn that was
+// running at the time may report the level it started at.
+let isChanged = false
 
 type Ran = { exitCode: number; stdout: string; stderr: string }
 
@@ -99,19 +102,25 @@ async function refresh($: EngineInterface): Promise<void> {
   }
   await update($, plugins, () => found)
 
-  // Until a turn reports them, the mode and effort are the ones settings start a session with.
+  // The engine tells a mod the session's model and not its effort. A session
+  // starts at the level settings keep for its model, /effort changes it, and
+  // it stays through /model and /clear: the panel follows the same.
   const model = await $.session.model().catch(() => '')
-  const permissions = settings.permissions
-  const startMode =
-    typeof permissions === 'object' && permissions !== null ? (permissions as { defaultMode?: unknown }).defaultMode : undefined
-  const perModel = settings.modelSettings
-  const mine = typeof perModel === 'object' && perModel !== null ? (perModel as Record<string, unknown>)[model.replace(/\[.*\]$/, '')] : undefined
-  const startEffort = typeof mine === 'object' && mine !== null ? (mine as { effortLevel?: unknown }).effortLevel : undefined
-  await update($, live, old => ({
+  const start = known !== '' ? known : savedEffort(settings, model)
+  const now = await update($, live, old => ({
     model,
-    mode: old.mode !== '' ? old.mode : typeof startMode === 'string' ? startMode : '',
-    effort: old.effort !== '' ? old.effort : typeof startEffort === 'string' ? startEffort : '',
+    effort: old.effort !== '' ? old.effort : start,
+    // a reload hands back what the panel kept before it, which may lack a field
+    ran: old.model === model ? (old.ran ?? '') : '',
   }))
+  known = now.effort
+}
+
+// The session was set to an effort.
+async function setEffort($: EngineInterface, level: string): Promise<void> {
+  known = level
+  isChanged = true
+  await update($, live, old => ({ ...old, effort: level, ran: '' }))
 }
 
 async function prime($: EngineInterface): Promise<void> {
@@ -119,7 +128,6 @@ async function prime($: EngineInterface): Promise<void> {
   const saved = await $.store.get('archived').catch(() => undefined)
   const archived = Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : []
   await update($, prefs, old => ({ ...old, archived }))
-  isAsking = (await read($, prefs)).ask
   await refresh($)
 }
 
@@ -190,6 +198,9 @@ async function showTab($: EngineInterface, tab: ModsTab): Promise<void> {
   await say($, '')
   if (tab === 'sessions') {
     await loadRoster($)
+  }
+  if (tab === 'control') {
+    await refresh($)
   }
 }
 
@@ -265,12 +276,20 @@ async function switchExternal($: EngineInterface, external: External): Promise<v
   void $.command.run({ command: 'reload-plugins' }).catch(() => undefined)
 }
 
+// A command run from the panel does not pass this mod's own command hooks, so
+// what it changed is taken from the run itself.
 function runCommand($: EngineInterface, command: string, args: string): void {
   void say($, '')
-  void $.command.run({ command, args }).then(
-    () => refresh($),
-    error => say($, `/${command}: ${brief(error)}`),
-  )
+  void $.command
+    .run({ command, args })
+    .then(async result => {
+      const level = command === 'effort' ? effortNamed(args, result.text ?? '') : ''
+      if (level !== '') {
+        await setEffort($, level)
+      }
+      await refresh($)
+    })
+    .catch(error => say($, `/${command}: ${brief(error)}`))
 }
 
 async function stopTurn($: EngineInterface): Promise<string> {
@@ -330,12 +349,6 @@ async function toggleArchived($: EngineInterface, row: ModsSessionRow): Promise<
   await say($, isRestore ? `${row.name} is back in the list.` : `Archived ${row.name}: it is only hidden. Click "archived" to see it again.`)
 }
 
-async function toggleAsk($: EngineInterface): Promise<void> {
-  const next = await update($, prefs, old => ({ ...old, ask: !old.ask }))
-  isAsking = next.ask
-  await say($, isAsking ? 'Ask mode is on here: edits, commands and fetches wait for your yes.' : 'Ask mode is off.')
-}
-
 function actionsOf($: EngineInterface): PanelActions {
   return {
     tab: tab => void showTab($, tab),
@@ -355,7 +368,6 @@ function actionsOf($: EngineInterface): PanelActions {
     },
     run: (command, args) => runCommand($, command, args ?? ''),
     stop: () => void stopTurn($).then(text => say($, text)),
-    ask: () => void toggleAsk($),
     openSession: row => void openSession($, row),
     archive: row => void toggleArchived($, row),
     refreshSessions: () => void loadRoster($),
@@ -453,6 +465,7 @@ export const register: Register = (on, options) => {
 
   on('turn.start', async ($, e, next) => {
     const startedAt = await $.clock.now()
+    isChanged = false
     await update($, turn, () => ({ id: e.turnId, startedAt }))
 
     return next(e)
@@ -470,37 +483,40 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // The permission mode and effort a turn ran under, for the Control tab.
-  on('classic.UserPromptSubmit', async ($, e, next) => {
-    const mode = e.permission_mode ?? ''
-    if (mode !== '') {
-      await update($, live, old => (old.mode === mode ? old : { ...old, mode }))
+  // /effort typed at the prompt. The level is the word after it. Its slider
+  // takes none and answers nothing a hook is shown, so there the level is
+  // read from settings, where a confirmed one is saved; one the slider sets
+  // for the session alone shows once a turn has run at it.
+  on('command.run', { command: 'effort' }, async ($, e, next) => {
+    const model = await $.session.model().catch(() => '')
+    const before = savedEffort(await $.settings.read().catch(() => ({})), model)
+    const result = await next(e)
+    const named = effortNamed(e.args, result.text ?? '')
+    const level = named !== '' ? named : savedEffort(await $.settings.read().catch(() => ({})), model)
+    if (named !== '' || level !== before) {
+      await setEffort($, level).catch(() => undefined)
     }
 
-    return next(e)
+    return result
   })
 
+  // /model typed at the prompt, its picker included.
+  on('command.run', { command: 'model' }, async ($, e, next) => {
+    const result = await next(e)
+    await refresh($).catch(() => undefined)
+
+    return result
+  })
+
+  // The effort a turn ran at, which is all the engine says of it.
   on('classic.Stop', async ($, e, next) => {
-    const mode = e.permission_mode ?? ''
-    const effort = e.effort?.level ?? ''
-    await update($, live, old =>
-      (mode === '' || old.mode === mode) && (effort === '' || old.effort === effort)
-        ? old
-        : { ...old, mode: mode === '' ? old.mode : mode, effort: effort === '' ? old.effort : effort },
-    )
+    const level = e.effort?.level ?? ''
+    if (level !== '' && !isChanged) {
+      known = (await update($, live, old => afterTurn(old, level))).effort
+    }
 
     return next(e)
   })
-
-  // Ask mode: the engine's own permission prompt for every change, whatever mode the session is in.
-  on('classic.PreToolUse', async ($, e, next) => {
-    const decided = await next(e)
-    if (!isAsking || decided.deny !== undefined || !(ASKS_FOR.has(e.tool) || e.tool.startsWith('mcp__'))) {
-      return decided
-    }
-
-    return { ...decided, allow: undefined, ask: 'mods: ask mode is on for this session' }
-  }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
     if (options.chips === false || e.surface !== 'terminal') {

@@ -2,7 +2,7 @@ import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { MockClock } from 'claude-code/testing'
 
-import { parseAsk, settingsOf, FEATURES } from '../hooks/lib/catalog'
+import { FEATURES, afterTurn, effortLine, effortNamed, parseAsk, pickedModel, savedEffort, settingsOf } from '../hooks/lib/catalog'
 import { buildRoster, openingOf, parseTitles, parseTtys, projectFolder } from '../hooks/lib/sessions'
 
 const PANE = {
@@ -14,7 +14,7 @@ const PANE = {
 } as const
 
 const ROWS = [
-  { key: 'model', label: 'Model', kind: 'choice', value: 'opus', options: ['default', 'opus', 'haiku'], provider: { plugin: 'engine', tier: 'core' }, isLocked: false },
+  { key: 'model', label: 'Model', kind: 'choice', value: 'Default (recommended)', options: ['default', 'sonnet', 'opus', 'haiku', 'fable', 'opus[1m]', 'fable[1m]', 'opusplan'], provider: { plugin: 'engine', tier: 'core' }, isLocked: false },
   { key: 'look.zen', label: 'Zen', kind: 'boolean', value: false, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
   { key: 'look.zenErrors', label: 'Zen keeps failures', kind: 'boolean', value: true, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
   { key: 'look.skins', label: 'Skins', kind: 'boolean', value: false, provider: { plugin: 'look', tier: 'user' }, isLocked: false },
@@ -22,16 +22,26 @@ const ROWS = [
   { key: 'mods.alertSound', label: 'Alert sound', kind: 'choice', value: 'Glass', options: ['none', 'Glass'], provider: { plugin: 'mods', tier: 'user' }, isLocked: false },
 ] as const
 
+// What the engine holds of a session: the model /model's row says is picked, the id that
+// comes to, and the effort settings keep for each model. A test moves it as the commands do.
+type Session = { picked: string; model: string; saved: Record<string, { effortLevel?: string }> }
+
+function session(): Session {
+  return { picked: 'Default (recommended)', model: 'claude-opus-5-5', saved: { 'claude-opus-5-5': { effortLevel: 'xhigh' } } }
+}
+
+type World = { ran?: string[][]; printed?: (argv: readonly string[]) => string; held?: Session }
+
 // Everything the mod asks of Claude Code at a session's start, answered from memory.
-function world(on: On, ran: string[][] = [], printed: (argv: readonly string[]) => string = () => ''): MockClock {
+function world(on: On, { ran = [], printed = () => '', held = session() }: World = {}): MockClock {
   const clock = mock.clock(on, { now: 1_000_000 })
   mock.store(on)
   mock.env(on, { HOME: '/home/me', TERM_PROGRAM: 'Apple_Terminal' })
   on('session.start', () => ({ cwd: '/work/app' }))
   on('command.register', () => ({ value: { command: 'mods' } }))
-  on('config.list', () => ({ value: ROWS.map(row => ({ ...row })) }))
-  on('settings.read', () => ({ value: { enabledPlugins: { 'next-steps@claude-community': true }, permissions: { defaultMode: 'auto' } } }))
-  on('session.model', () => ({ value: 'claude-opus-5-5' }))
+  on('config.list', () => ({ value: ROWS.map(row => (row.key === 'model' ? { ...row, value: held.picked } : { ...row })) }))
+  on('settings.read', () => ({ value: { enabledPlugins: { 'next-steps@claude-community': true }, modelSettings: held.saved } }))
+  on('session.model', () => ({ value: held.model }))
   on('session.id', () => ({ value: 'self-session' }))
   on('session.cwd', () => ({ value: '/work/app' }))
   on('ui.panes', () => ({ value: [] }))
@@ -109,7 +119,7 @@ test('the control tab runs the model command and stops the running turn', async 
   const commands: string[] = []
   const aborted: string[] = []
   world(on)
-  on('command.run', { command: ['model', 'effort', 'plan'] }, ($, e) => {
+  on('command.run', { command: ['model', 'effort'] }, ($, e) => {
     commands.push(`/${e.command} ${e.args}`.trim())
 
     return {}
@@ -128,12 +138,95 @@ test('the control tab runs the model command and stops the running turn', async 
 
   expect(commands).toEqual(['/model haiku'])
   expect(aborted).toEqual(['turn-1'])
+  // The permission mode is not the panel's to set, so the tab has nothing about it.
+  expect((await ui.findAll({ type: 'Text' })).filter(text => text.text === 'Mode')).toEqual([])
+  expect(await ui.find({ key: 'ask' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('the control tab marks the model and the effort the session is on, and a click moves the mark', async ($, on) => {
+  const held = session()
+  const clock = world(on, { held })
+  // The engine's /model and /effort as a plugin's run gets them: for this session, settings untouched.
+  on('command.run', { command: 'model' }, ($, e) => {
+    held.picked = e.args === 'default' ? 'Default (recommended)' : e.args
+    held.model = e.args === 'haiku' ? 'claude-haiku-5-5' : 'claude-opus-5-5'
+
+    return { text: `Set model to ${e.args} for this session only` }
+  })
+  on('command.run', { command: 'effort' }, ($, e) => ({ text: `Set effort level to ${e.args} (this session only): as asked` }))
+  await $.session.start(START)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'tab:control' })
+  const marked = async (group: string) =>
+    (await ui.findAll({ type: 'Button' })).filter(button => button.key?.startsWith(`${group}:`) === true && button.text.includes('●')).map(button => button.key)
+
+  // The default model is the engine's own words in its row, and the effort is what settings keep for it.
+  expect(await marked('model')).toEqual(['model:default'])
+  expect(await marked('effort')).toEqual(['effort:xhigh'])
+  expect(await ui.find({ type: 'Text', text: 'claude-opus-5-5' })).toBeDefined()
+
+  await ui.press({ key: 'effort:max' })
+  await clock.settle()
+  expect(await marked('effort')).toEqual(['effort:max'])
+
+  // The effort stays through a change of model, as the engine keeps it.
+  await ui.press({ key: 'model:haiku' })
+  await clock.settle()
+  expect(await marked('model')).toEqual(['model:haiku'])
+  expect(await marked('effort')).toEqual(['effort:max'])
+  expect(await ui.find({ type: 'Text', text: 'claude-haiku-5-5' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('the effort mark follows /effort typed at the prompt, its slider, and what a turn ran at', async ($, on) => {
+  const held = session()
+  world(on, { held })
+  // Typed, /effort answers nothing a hook is shown; its slider, confirmed, saves the level in settings.
+  on('command.run', { command: 'effort' }, ($, e) => {
+    if (e.args === '') {
+      held.saved = { 'claude-opus-5-5': { effortLevel: 'high' } }
+    }
+
+    return {}
+  })
+  on('classic.Stop', () => ({}))
+  await $.session.start(START)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'tab:control' })
+  const marked = async () =>
+    (await ui.findAll({ type: 'Button' })).filter(button => button.key?.startsWith('effort:') === true && button.text.includes('●')).map(button => button.key)
+
+  await $.command.run(typed('effort', 'low'))
+  expect(await marked()).toEqual(['effort:low'])
+
+  await $.command.run(typed('effort', ''))
+  expect(await marked()).toEqual(['effort:high'])
+
+  // A level the model cannot run is lowered by the engine: the turn says what it ran at.
+  await $.command.run(typed('effort', 'max'))
+  await $.turn.start({ text: 'go', turnId: 'turn-1' })
+  await $.classic.Stop({ stop_hook_active: false, effort: { level: 'xhigh' } })
+  expect(await marked()).toEqual(['effort:xhigh'])
+
+  // Auto stays picked, with the level it came to beside it.
+  await $.command.run(typed('effort', 'auto'))
+  await $.turn.start({ text: 'again', turnId: 'turn-2' })
+  await $.classic.Stop({ stop_hook_active: false, effort: { level: 'high' } })
+  expect(await marked()).toEqual(['effort:auto'])
+  expect(await ui.find({ type: 'Text', text: 'auto · last turn ran at high' })).toBeDefined()
+
+  // A turn that was running when the effort changed reports the old level, which is not taken.
+  await $.turn.start({ text: 'more', turnId: 'turn-3' })
+  await $.command.run(typed('effort', 'max'))
+  await $.classic.Stop({ stop_hook_active: false, effort: { level: 'high' } })
+  expect(await marked()).toEqual(['effort:max'])
   await ui.unmount()
 })
 
 test('the done alert is off until switched on: a long turn ends in silence, then with a sound once /mods switches it', async ($, on) => {
   const ran: string[][] = []
-  const clock = world(on, ran)
+  const clock = world(on, { ran })
   await $.session.start(START)
   const turn = { answer: 'done', isAborted: false, turnId: 'turn-1', reason: 'answer' } as const
 
@@ -149,7 +242,7 @@ test('the done alert is off until switched on: a long turn ends in silence, then
 
 test('a long turn ends with a sound and a banner, a short one with neither', { options: { alert: true } }, async ($, on) => {
   const ran: string[][] = []
-  const clock = world(on, ran)
+  const clock = world(on, { ran })
   await $.session.start(START)
   const turn = { answer: 'done', isAborted: false, turnId: 'turn-1', reason: 'answer' } as const
 
@@ -185,7 +278,7 @@ const AGENTS = [
 ]
 
 function withSessions(on: On): void {
-  world(on, [], argv => (argv.includes('agents') ? JSON.stringify(AGENTS) : ''))
+  world(on, { printed: argv => (argv.includes('agents') ? JSON.stringify(AGENTS) : '') })
   on('fs.read', () => ({ value: '' }))
   on('fs.list', () => ({ value: [] }))
 }
@@ -256,6 +349,42 @@ test('a feature page lists its own options only', () => {
 
   expect(alert === undefined ? [] : settingsOf(alert, rows).map(row => row.key)).toEqual(['mods.alertSound'])
   expect(zen === undefined ? [] : settingsOf(zen, rows).map(row => row.key)).toEqual(['look.zenErrors'])
+})
+
+test('the model in use is found among /model\'s options, however it was named', () => {
+  const row = (value: string) => ({ key: 'model', label: 'Model', description: '', kind: 'choice' as const, value, options: [...(ROWS[0].options)] })
+
+  expect(pickedModel(row('Default (recommended)'))).toBe('default')
+  expect(pickedModel(row('opus[1m]'))).toBe('opus[1m]')
+  expect(pickedModel(row('opusplan'))).toBe('opusplan')
+  // A full id, as settings or --model name one, is matched by family, and by context size where /model lists it.
+  expect(pickedModel(row('claude-fable-5-1[1m]'))).toBe('fable[1m]')
+  expect(pickedModel(row('claude-opus-5-5'))).toBe('opus')
+  expect(pickedModel(row('claude-sonnet-5-5[1m]'))).toBe('sonnet')
+  expect(pickedModel(row('some-other-model'))).toBe('')
+  expect(pickedModel(undefined)).toBe('')
+})
+
+test('the effort is read from settings, from an /effort run and from a turn', () => {
+  const settings = { modelSettings: { 'claude-opus-5-5': { effortLevel: 'xhigh' }, 'claude-sonnet-5-5': {} } }
+  expect(savedEffort(settings, 'claude-opus-5-5[1m]')).toBe('xhigh')
+  expect(savedEffort(settings, 'claude-sonnet-5-5')).toBe('auto')
+  expect(savedEffort({}, 'claude-haiku-5-5')).toBe('auto')
+
+  expect(effortNamed('max', '')).toBe('max')
+  expect(effortNamed('max', 'Set effort level to high (this session only): the most this model runs')).toBe('high')
+  expect(effortNamed('', 'Set effort level to high (saved as your default for new sessions): thorough')).toBe('high')
+  expect(effortNamed('', 'Effort level set to auto')).toBe('auto')
+  expect(effortNamed('', 'Cancelled')).toBe('')
+  expect(effortNamed('', '')).toBe('')
+
+  const live = { model: 'claude-opus-5-5', effort: 'max', ran: '' }
+  expect(afterTurn(live, 'max')).toEqual({ model: 'claude-opus-5-5', effort: 'max', ran: 'max' })
+  expect(afterTurn(live, 'high').effort).toBe('high')
+  expect(afterTurn({ ...live, effort: 'auto' }, 'high')).toEqual({ model: 'claude-opus-5-5', effort: 'auto', ran: 'high' })
+  expect(effortLine({ ...live, ran: 'max' })).toBe('max')
+  expect(effortLine({ ...live, effort: 'auto', ran: 'high' })).toBe('auto · last turn ran at high')
+  expect(effortLine(live)).toBe('max')
 })
 
 test('the roster lists live sessions first and knows how each one opens', () => {

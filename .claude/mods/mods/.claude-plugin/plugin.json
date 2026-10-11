@@ -1,7 +1,7 @@
 {
   "name": "mods",
   "version": "0.1.0",
-  "description": "A panel that lists every mod with a switch for this session and one for all sessions, plus a control center (model, effort, mode, stop), a session switcher and a done alert. Plain code: it makes no model calls of its own.",
+  "description": "A panel that lists every mod with a switch for this session and one for all sessions, plus a control center (model, effort, stop), a session switcher and a done alert. Plain code: it makes no model calls of its own.",
   "author": { "name": "João Veríssimo" },
   "license": "MIT",
   "keywords": ["mods", "panel", "control-center", "sessions", "notifications", "function-hooks"],

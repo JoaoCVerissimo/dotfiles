@@ -10,7 +10,9 @@ export type ModsSwitches = Record<string, boolean>
 
 export type ModsTurn = { id: string; startedAt: number } | null
 
-export type ModsLive = { mode: string; model: string; effort: string }
+// What the Control tab shows of the session: its model, the effort it is set
+// to (a level, or auto), and the level its last turn ran at ('' before one).
+export type ModsLive = { model: string; effort: string; ran: string }
 
 export type ModsRow = {
   key: string
@@ -40,7 +42,7 @@ export type ModsSessionRow = {
 
 export type ModsRoster = { at: number; rows: ModsSessionRow[]; error: string }
 
-export type ModsPrefs = { archived: string[]; showArchived: boolean; ask: boolean }
+export type ModsPrefs = { archived: string[]; showArchived: boolean }
 
 declare module 'claude-code' {
   interface PluginState {

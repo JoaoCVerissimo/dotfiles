@@ -21,8 +21,10 @@ import {
   alwaysOf,
   baseName,
   clip,
+  effortLine,
   externalRows,
   isOnHere,
+  pickedModel,
   rowOf,
   settingsOf,
 } from './catalog'
@@ -55,7 +57,6 @@ export type PanelActions = {
   setRow: (row: ModsRow, value: boolean | string) => void
   run: (command: string, args?: string) => void
   stop: () => void
-  ask: () => void
   openSession: (row: ModsSessionRow) => void
   archive: (row: ModsSessionRow) => void
   refreshSessions: () => void
@@ -302,6 +303,7 @@ function drawDetail(t: Kit, data: PanelData, act: PanelActions, id: string): Ren
 function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement {
   const { Box, Text, Button, Input } = t
   const model = rowOf(data.rows, 'model')
+  const onModel = pickedModel(model)
   const chips = rowOf(data.rows, 'mods.chips')
   const isWorking = data.turn !== null
   const pick = (label: string, isPicked: boolean, key: string, onPress: () => void): RenderElement => (
@@ -320,27 +322,15 @@ function drawControl(t: Kit, data: PanelData, act: PanelActions): RenderElement 
       {model !== undefined && (
         <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
           {model.options.map(option =>
-            pick(option, model.value === option, `model:${option}`, () => act.run('model', option)),
+            pick(option, onModel === option, `model:${option}`, () => act.run('model', option)),
           )}
         </Box>
       )}
-      {heading(t, 'Effort', data.live.effort)}
+      {heading(t, 'Effort', effortLine(data.live))}
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
         {EFFORTS.map(level =>
           pick(level, data.live.effort === level, `effort:${level}`, () => act.run('effort', level)),
         )}
-      </Box>
-      {heading(t, 'Mode', data.live.mode === '' ? 'not seen yet' : data.live.mode)}
-      <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={1}>
-        {action('plan mode', 'plan')}
-        <Button key="ask" plain onPress={() => act.ask()}>
-          {dot(t, data.prefs.ask)} ask before changes, here
-        </Button>
-      </Box>
-      <Box paddingLeft={1}>
-        <Text dimColor wrap="wrap">
-          shift+tab cycles auto, manual, accept edits and plan
-        </Text>
       </Box>
       {heading(t, 'Turn', isWorking ? 'working' : 'idle')}
       <Box paddingLeft={1}>
