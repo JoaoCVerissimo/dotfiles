@@ -8,7 +8,7 @@
     {
       "name": "mods",
       "source": "./mods",
-      "description": "The mods panel: a switch per mod for this session and for every session, a control center (model, effort, mode, stop), a session switcher and a done alert. No tokens."
+      "description": "The mods panel: a switch per mod for this session and for every session, a control center (model, effort, stop), a session switcher and a done alert. No tokens."
     },
     {
       "name": "flow",
