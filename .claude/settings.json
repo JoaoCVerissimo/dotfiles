@@ -39,13 +39,44 @@
     "vercel@claude-plugins-official": false,
     "ruby-lsp@claude-plugins-official": false,
     "frontend-design@claude-plugins-official": false,
-    "superpowers@claude-plugins-official": false
+    "superpowers@claude-plugins-official": false,
+    "mods@jv-mods": true,
+    "flow@jv-mods": true,
+    "look@jv-mods": true,
+    "keepwarm@jv-mods": true,
+    "reflect@jv-mods": true,
+    "browser@jv-mods": true,
+    "next-steps@claude-community": true,
+    "blast-radius@claude-code-playground-mods": false,
+    "cc-plugin-you-should-know@builtin": true
   },
   "extraKnownMarketplaces": {
     "37signals": {
       "source": {
         "source": "github",
         "repo": "basecamp/claude-plugins"
+      }
+    },
+    "jv-mods": {
+      "source": {
+        "source": "directory",
+        "path": "~/Developer/dotfiles/.claude/mods"
+      }
+    },
+    "claude-community": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-community",
+        "sparsePaths": [
+          ".claude-plugin",
+          "next-steps"
+        ]
+      }
+    },
+    "claude-code-playground-mods": {
+      "source": {
+        "source": "directory",
+        "path": "~/.local/share/claude-code-playground/claude-code/mods"
       }
     }
   },

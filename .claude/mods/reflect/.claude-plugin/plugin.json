@@ -1,0 +1,34 @@
+{
+  "name": "reflect",
+  "version": "0.1.0",
+  "description": "Notices when you correct Claude or state a preference, turns it into a one-line rule, and offers to save it for this project or for every project so the next session already knows.",
+  "author": { "name": "João Veríssimo" },
+  "license": "MIT",
+  "keywords": ["memory", "learning", "claude-md", "function-hooks"],
+  "types": "./types/index.d.ts",
+  "dependencies": ["mods"],
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Reflect",
+      "description": "Offer to save rules learned from your corrections.",
+      "required": false,
+      "default": true
+    },
+    "detect": {
+      "type": "string",
+      "title": "What to look at",
+      "description": "auto checks prompts that read like a correction or a preference with one small model call each (the prompt and the end of Claude's last reply are sent to that model). explicit only takes prompts that start with remember:.",
+      "required": false,
+      "default": "auto",
+      "options": ["auto", "explicit"]
+    },
+    "model": {
+      "type": "string",
+      "title": "Model that words the rule",
+      "description": "A model alias or id for the small call that decides whether a prompt holds a rule.",
+      "required": false,
+      "default": "haiku"
+    }
+  }
+}

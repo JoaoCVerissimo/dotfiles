@@ -75,10 +75,14 @@ link .claude/CLAUDE.md     "$HOME/.claude/CLAUDE.md"
 link .claude/statusline.sh "$HOME/.claude/statusline.sh"
 link .claude/agents        "$HOME/.claude/agents"
 link .claude/commands      "$HOME/.claude/commands"
+link .claude/rules         "$HOME/.claude/rules"
 
 # VS Code: keybindings are linked; settings.json is seeded because extensions write machine state into it
 link vscode/keybindings.json "$VSCODE_USER/keybindings.json"
 seed vscode/settings.json    "$VSCODE_USER/settings.json"
+
+# Claude Code mods: mine are read from .claude/mods/, Anthropic's are installed (needs claude on PATH)
+if [[ $DRY_RUN -eq 1 ]]; then echo "  would: scripts/claude-mods.sh"; else "$DOTFILES/scripts/claude-mods.sh"; fi
 
 [[ -d "$BACKUP" ]] && echo "Previous files saved under $BACKUP"
 if [[ $DRY_RUN -eq 1 ]]; then echo "(dry run: nothing changed)"; else echo "Done. Open a new terminal (or run: source ~/.zshrc)."; fi

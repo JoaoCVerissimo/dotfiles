@@ -1,0 +1,33 @@
+{
+  "name": "browser",
+  "version": "0.1.0",
+  "description": "A pane that shows a web page as readable text, with its console errors and a small color preview: load a URL, follow links, reload, and hand the page to Claude. Pages are loaded with headless Chrome.",
+  "author": { "name": "João Veríssimo" },
+  "license": "MIT",
+  "keywords": ["browser", "preview", "localhost", "function-hooks"],
+  "types": "./types/index.d.ts",
+  "dependencies": ["mods"],
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Browser",
+      "description": "Offer the /browser pane.",
+      "required": false,
+      "default": true
+    },
+    "agentTool": {
+      "type": "boolean",
+      "title": "Let Claude open pages",
+      "description": "Give Claude a tool that loads a URL in the pane and returns the page's text and console errors.",
+      "required": false,
+      "default": false
+    },
+    "waitMs": {
+      "type": "number",
+      "title": "Page settle time (ms)",
+      "description": "How long headless Chrome lets a page's scripts run before the page is read.",
+      "required": false,
+      "default": 4000
+    }
+  }
+}
