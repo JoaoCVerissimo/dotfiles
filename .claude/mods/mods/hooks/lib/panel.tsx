@@ -68,6 +68,9 @@ const TABS: ReadonlyArray<{ id: ModsTab; title: string }> = [
   { id: 'sessions', title: 'Sessions' },
 ]
 
+// The letters that archive a row of the Sessions tab; r and v are that tab's own keys.
+const ROW_KEYS: readonly string[] = [...HOTKEYS].filter(key => key !== 'r' && key !== 'v')
+
 function dot(t: Kit, isOn: boolean): RenderElement {
   return <t.Text color={isOn ? 'success' : 'inactive'}>{isOn ? '●' : '○'}</t.Text>
 }
@@ -359,7 +362,9 @@ function drawSessions(t: Kit, data: PanelData, act: PanelActions): RenderElement
   const archived = new Set(data.prefs.archived)
   const shown = data.roster.rows.filter(row => data.prefs.showArchived || !archived.has(row.key))
   const hidden = data.roster.rows.length - shown.length
-  const room = Math.max(12, data.width - 18)
+  // The rows that can be archived, each under the next letter in the order drawn.
+  const keyed = shown.filter(row => !row.isSelf)
+  const room = Math.max(12, data.width - 21)
 
   return (
     <Box flexDirection="column">
@@ -396,6 +401,7 @@ function drawSessions(t: Kit, data: PanelData, act: PanelActions): RenderElement
                 <Button
                   key={`arch:${row.key}`}
                   plain
+                  hotkey={ROW_KEYS[keyed.indexOf(row)]}
                   dimColor
                   label={isArchived ? 'restore' : 'archive'}
                   onPress={() => act.archive(row)}
@@ -412,7 +418,7 @@ function drawSessions(t: Kit, data: PanelData, act: PanelActions): RenderElement
       })}
       <Box marginTop={1}>
         <Text dimColor wrap="wrap">
-          enter opens a session: its terminal tab if it has one, else it is resumed here · archive only hides a row
+          enter opens a session: its terminal tab if it has one, else it is resumed here · a row's letter archives it, which only hides the row
         </Text>
       </Box>
     </Box>

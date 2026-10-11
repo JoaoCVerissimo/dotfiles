@@ -23,7 +23,7 @@ const ROWS = [
 ] as const
 
 // Everything the mod asks of Claude Code at a session's start, answered from memory.
-function world(on: On, ran: string[][] = []): MockClock {
+function world(on: On, ran: string[][] = [], printed: (argv: readonly string[]) => string = () => ''): MockClock {
   const clock = mock.clock(on, { now: 1_000_000 })
   mock.store(on)
   mock.env(on, { HOME: '/home/me', TERM_PROGRAM: 'Apple_Terminal' })
@@ -40,7 +40,7 @@ function world(on: On, ran: string[][] = []): MockClock {
   on('process.run', ($, e) => {
     ran.push([...e.argv])
 
-    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    return { value: { exitCode: 0, stdout: printed(e.argv), stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
   on('turn.complete', ($, e) => ({ text: e.answer }))
@@ -154,6 +154,35 @@ test('the hint line carries the quick buttons, and a stop button while a turn ru
   const busy = await $.ui.mount({ ...hint, surface: 'terminal', props: { isDraft: false, isWorking: true, hint: 'esc to interrupt' } })
   expect(await busy.find({ key: 'chip:stop' })).toBeDefined()
   await busy.unmount()
+})
+
+test('a row\'s letter archives a session, and the archived list brings it back', async ($, on) => {
+  const agents = [
+    { pid: 11, cwd: '/work/api', kind: 'interactive', startedAt: 100, sessionId: 'a', name: 'api-1', status: 'idle' },
+    { pid: 12, cwd: '/work/app', kind: 'interactive', startedAt: 200, sessionId: 'self-session', name: 'app-2', status: 'busy' },
+    { pid: 13, cwd: '/work/web', kind: 'interactive', startedAt: 300, sessionId: 'c', name: 'web-3', status: 'idle' },
+  ]
+  world(on, [], argv => (argv.includes('agents') ? JSON.stringify(agents) : ''))
+  on('fs.read', () => ({ value: '' }))
+  on('fs.list', () => ({ value: [] }))
+  await $.session.start(START)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'tab:sessions' })
+
+  // Every other session has a letter; this one cannot be archived from itself.
+  const letters = (await ui.findAll({ type: 'Button', text: 'archive' })).filter(button => button.key?.startsWith('arch:')).map(button => button.props.hotkey)
+  expect(letters).toEqual(['a', 'b'])
+  expect(await ui.find({ key: 'arch:self-session' })).toBeUndefined()
+
+  await ui.press({ key: 'arch:a' })
+  expect(await ui.find({ key: 'open:a' })).toBeUndefined()
+  expect((await ui.find({ key: 'archived' }))?.text).toContain('(1)')
+
+  await ui.press({ key: 'archived' })
+  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('restore')
+  await ui.press({ key: 'arch:a' })
+  expect((await ui.find({ key: 'arch:a' }))?.props.label).toBe('archive')
+  await ui.unmount()
 })
 
 test('words after /mods are read as a tab, a stop or a switch', () => {

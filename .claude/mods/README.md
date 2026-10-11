@@ -18,7 +18,7 @@ Needs Claude Code 2.1.296 or later, in a terminal (the fullscreen renderer docks
 | --- | --- |
 | **Mods** | One row per mod. Its letter switches it **for this session**; `›` opens its page with the **always** switch (every session) and its settings. Always-switches and settings are Claude Code's own plugin options, so they land in `settings.json` (`pluginConfigs`). Anthropic's mods switch whole, for every session. |
 | **Control** | Model and effort (run `/model`, `/effort`), plan mode, **ask before changes** (the real permission prompt for every edit, command and fetch in this session, whatever mode it is in), **stop this turn**, and `/focus`, `/fast`, `/context`, `/usage`, `/recap`, `/compact`, `/clear`, rename. |
-| **Sessions** | Every session on this machine, live ones first (green dot), then this project's past conversations. Enter brings a session's terminal tab to the front, or resumes it here. **archive** hides a row and touches nothing else. |
+| **Sessions** | Every session on this machine, live ones first (green dot), then this project's past conversations. Enter brings a session's terminal tab to the front, or resumes it here. The letter on a row **archives** it: that hides the row and touches nothing else (`v` shows the hidden rows, where the letter restores one). |
 
 Also from the command line: `/mods zen on`, `/mods keepwarm off always`, `/mods stop`, `/mods sessions`.
 
