@@ -13,7 +13,7 @@
       "title": "Zen",
       "description": "Hide tool calls and their output in the transcript; prompts, answers and the progress band stay.",
       "required": false,
-      "default": true
+      "default": false
     },
     "zenErrors": {
       "type": "boolean",

@@ -3,7 +3,7 @@
 Six [mods](https://code.claude.com/docs/en/plugins/mods/overview) of my own, plus three of Anthropic's installed as they ship,
 all switched from one panel. They are read straight from this folder, so an edit here is live after `/reload-plugins`.
 
-**The panel, Zen, Peek and the Done alert start on**: all four are plain code and cost no tokens. Every other mod
+**The panel, Peek and the Done alert start on**: all three are plain code and cost no tokens. Every other mod
 starts off and does nothing (and costs nothing) until it is switched on there: for one session, or for every session.
 
 ```sh
@@ -30,7 +30,7 @@ Also from the command line: `/mods zen on`, `/mods keepwarm off always`, `/mods 
 
 ## The mods
 
-Zen, Peek and the Done alert start **on**, the rest **off**. The last column is what one adds to your usage once it is on.
+Peek and the Done alert start **on**, the rest **off**. The last column is what one adds to your usage once it is on.
 
 | Mod | Folder | What it does | Extra usage |
 | --- | --- | --- | --- |

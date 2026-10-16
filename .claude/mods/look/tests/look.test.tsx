@@ -72,7 +72,7 @@ function world(on: On, files: Map<string, string>, picks: Record<string, string>
 
 const START = { surface: 'terminal', isInteractive: true, cwd: '/work/shop' } as const
 
-test('zen is on by default: it hides a tool row and keeps one that failed', async ($, on) => {
+test('zen hides a tool row and keeps one that failed', { options: { zen: true } }, async ($, on) => {
   world(on, new Map())
   await $.session.start(START)
 
@@ -85,7 +85,7 @@ test('zen is on by default: it hides a tool row and keeps one that failed', asyn
   await failed.unmount()
 })
 
-test('with zen switched off the rows are Claude Code\'s own', { options: { zen: false } }, async ($, on) => {
+test('without zen the rows are Claude Code\'s own', async ($, on) => {
   world(on, new Map())
   await $.session.start(START)
   const row = await $.ui.mount({ ...ROW, surface: 'terminal' })
