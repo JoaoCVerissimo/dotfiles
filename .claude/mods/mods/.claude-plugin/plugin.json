@@ -12,7 +12,7 @@
       "title": "Done alert",
       "description": "When a turn that took a while ends, play a sound and mark the session's terminal.",
       "required": false,
-      "default": false
+      "default": true
     },
     "alertSound": {
       "type": "string",

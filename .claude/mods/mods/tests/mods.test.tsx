@@ -278,7 +278,7 @@ test('the effort mark follows /effort typed at the prompt, its slider, and what 
   await ui.unmount()
 })
 
-test('the done alert is off until switched on: a long turn ends in silence, then with a sound once /mods switches it', async ($, on) => {
+test('the done alert switched off: a long turn ends in silence, then with a sound once /mods switches it on', { options: { alert: false } }, async ($, on) => {
   const ran: string[][] = []
   const clock = world(on, { ran })
   await $.session.start(START)
@@ -297,7 +297,7 @@ test('the done alert is off until switched on: a long turn ends in silence, then
 // The commands an alert runs: the sound, and the bell written to the session's own terminal.
 const alerts = (ran: string[][]) => ran.filter(argv => argv[0] === 'afplay' || argv[0] === 'osascript' || (argv[0] === 'sh' && argv[2]?.includes('printf "\\a"') === true)).map(argv => argv[0])
 
-test('a long turn ends with a sound and the terminal\'s bell, a short one with neither, and no banner is posted', { options: { alert: true } }, async ($, on) => {
+test('on by default: a long turn ends with a sound and the terminal\'s bell, a short one with neither, and no banner is posted', async ($, on) => {
   const ran: string[][] = []
   const clock = world(on, { ran })
   await $.session.start(START)

@@ -2,8 +2,8 @@
 # Registers the Claude Code mods kept in this repo and installs the ones Anthropic publishes. Idempotent.
 #   scripts/claude-mods.sh
 # Mine are read straight from .claude/mods/, so an edit there is live after /reload-plugins.
-# Every mod starts switched off: the panel (/mods) is the one thing that is on, and the rest is switched
-# on from it. What is on lives in .claude/settings.json (enabledPlugins, pluginConfigs), and a choice
+# The panel (/mods), Zen, Peek and the done alert start on (plain code, no tokens); every other mod starts
+# switched off and is switched on from the panel. What is on lives in .claude/settings.json (enabledPlugins, pluginConfigs), and a choice
 # already made there is never changed here.
 set -euo pipefail
 

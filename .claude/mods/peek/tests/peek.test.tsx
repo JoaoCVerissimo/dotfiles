@@ -91,7 +91,7 @@ function world(on: On, box: { text: string }, ran: string[][] = [], windows: Sho
   return clock
 }
 
-test('off until it is switched on: the prompt box is not read and nothing is drawn', async ($, on) => {
+test('switched off, the prompt box is not read and nothing is drawn', { options: { enabled: false } }, async ($, on) => {
   const ran: string[][] = []
   const clock = world(on, { text: '[Image #1] what is this?' }, ran)
   await $.session.start(START)
@@ -104,7 +104,7 @@ test('off until it is switched on: the prompt box is not read and nothing is dra
   await band.unmount()
 })
 
-test('an image in the prompt box is drawn above it, with its number and size', { options: { enabled: true } }, async ($, on) => {
+test('on by default: an image in the prompt box is drawn above it, with its number and size', async ($, on) => {
   const ran: string[][] = []
   const box = { text: '' }
   const clock = world(on, box, ran)

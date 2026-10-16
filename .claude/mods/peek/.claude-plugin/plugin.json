@@ -13,7 +13,7 @@
       "title": "Peek",
       "description": "Preview the images pasted into the prompt.",
       "required": false,
-      "default": false
+      "default": true
     },
     "columns": {
       "type": "number",
