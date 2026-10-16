@@ -39,13 +39,13 @@ All of them start **off**. The last column is what one adds to your usage once i
 | **Skins** | `look/` | A color palette per project, as a Claude Code theme of the project's own: it colors the prompt box, Claude's marks and your own messages. `/skin` opens the picker, `/skin ocean` picks by name, `/skin none` removes it. A first pick shows from the next session started in that folder; after that a pick recolors the running session at once. | none |
 | **Keep warm** | `keepwarm/` | After each turn, one small request shortly before the prompt cache would expire, for the next two hours, so coming back does not re-read the whole context at full price. Shows what each ping read and paid, stops when a ping finds the cache gone, and says when the cache is cold. `/keepwarm` for status, `/keepwarm now` to ping. | **tokens** |
 | **Reflect** | `reflect/` | When a prompt reads like a correction or a preference, or starts with `remember:`, words it as a one-line rule and offers it above the prompt with three buttons: save for this project (`CLAUDE.local.md`), save everywhere (`~/.claude/rules/learned.md`), or skip. | few tokens |
-| **Browser** | `browser/` | `/browser localhost:3000` shows a page as text in a pane: numbered links, console output, back, reload, a small color preview, and a button that hands the page to Claude with your next prompt. Pages load in headless Chrome. | none |
+| **Peek** | `peek/` | A small preview above the prompt box of each image pasted into it (`[Image #1]`), drawn in colored half-block cells so Apple Terminal can show it, with an **Open** button that shows the picture itself in a small window over the terminal. | none |
 | **Done alert** | `mods/` | When a turn that took a while ends: a sound, and a mark on the session's terminal (its own notification where it has one, else its bell, which marks the tab). | none |
 | Next steps | Anthropic | Up to three suggested next prompts after each turn. Its number keys are Anthropic's own: `1` `2` `3` put a suggestion in the prompt box as a draft (nothing is sent until you press Enter), `0` dismisses. | **tokens** |
 | Blast radius | Anthropic | Holds a risky shell command (`rm -rf`, `git reset --hard`, a force push, a migration) and shows what it would change. | none |
 | You should know | built in | A side agent that points out things you might miss on longer tasks. | **tokens** |
 
-A mod's own command (`/flow`, `/skin`, `/keepwarm`, `/reflect`, `/browser`) says so when the mod is off, and where to
+A mod's own command (`/flow`, `/skin`, `/keepwarm`, `/reflect`) says so when the mod is off, and where to
 switch it on.
 
 ## What uses tokens
@@ -54,7 +54,7 @@ A mod left off uses nothing: it declares no tool to Claude, adds nothing to the 
 follows is what each one adds once it is on. The panel shows it on every row (`no tokens`, `few tokens`, `tokens`) and
 spells it out on each mod's page.
 
-**Plain code, no model call:** Zen, Skins, Done alert, Blast radius, the Browser while you browse, and the panel itself
+**Plain code, no model call:** Zen, Skins, Peek, Done alert, Blast radius, and the panel itself
 (switches, control center, session list). The Control tab's buttons run the commands you would type, so `/compact` and
 `/recap` cost what they always cost.
 
@@ -67,8 +67,6 @@ spells it out on each mod's page.
 - **Reflect**: one small Haiku call (under a thousand tokens) when a prompt reads like a correction or a preference. None
   for `remember:` or any other prompt, and none at all with *What to look at* on `explicit`. A saved rule is then one line
   in the context of later sessions.
-- **Browser**, only when you ask: *→ Claude* attaches the page to your next prompt (up to 20,000 characters, about 5,000
-  tokens), and *Let Claude open pages* (off) gives Claude a tool whose pages it reads.
 
 **Model requests of their own:**
 

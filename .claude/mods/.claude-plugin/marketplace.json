@@ -31,9 +31,9 @@
       "description": "Turns your corrections into one-line rules you can save for the project or for every project. Few tokens."
     },
     {
-      "name": "browser",
-      "source": "./browser",
-      "description": "A web page as readable text in a pane, with its console output and a small color preview. No tokens."
+      "name": "peek",
+      "source": "./peek",
+      "description": "A preview of each image pasted into the prompt, drawn above the prompt box, with a button that opens the picture itself. No tokens."
     }
   ]
 }

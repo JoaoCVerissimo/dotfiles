@@ -89,16 +89,12 @@ export const FEATURES: readonly Feature[] = [
     },
   },
   {
-    id: 'browser',
-    plugin: 'browser',
+    id: 'peek',
+    plugin: 'peek',
     field: 'enabled',
-    title: 'Browser',
-    blurb: 'web pages in a pane',
-    command: 'browser',
-    usage: {
-      level: 'none',
-      note: 'Plain code: pages load in headless Chrome and become text on this machine. Only what you hand to Claude costs: "→ Claude" attaches the page (up to 20,000 characters, about 5,000 tokens) to your next prompt, and "Let Claude open pages" (off) gives Claude a tool whose pages it reads.',
-    },
+    title: 'Peek',
+    blurb: 'preview pasted images',
+    usage: { level: 'none', note: 'Plain code: each pasted picture is shrunk with sips on this machine and drawn as colored cells. Open shows the picture itself in a small window.' },
   },
   {
     id: 'alert',

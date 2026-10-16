@@ -47,7 +47,7 @@ install() {
 
 # Mine: the plugins are enabled, and each mod's own switch (off until flipped in /mods) decides what runs
 add_folder jv-mods "$MODS"
-for mod in mods flow look keepwarm reflect browser; do install "$mod@jv-mods" true; done
+for mod in mods flow look keepwarm reflect peek; do install "$mod@jv-mods" true; done
 
 # Anthropic's next-steps, from the community marketplace (only its folder is checked out)
 if has_marketplace claude-community; then echo "ok         marketplace claude-community"

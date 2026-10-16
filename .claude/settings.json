@@ -25,13 +25,13 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-fable-5-1[1m]",
   "skillOverrides": {
     "basecamp": "off"
   },
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh"
+    "command": "~/.claude/statusline.sh",
+    "refreshInterval": 30
   },
   "enabledPlugins": {
     "code-review@claude-plugins-official": false,
@@ -45,10 +45,10 @@
     "look@jv-mods": true,
     "keepwarm@jv-mods": true,
     "reflect@jv-mods": true,
-    "browser@jv-mods": true,
-    "next-steps@claude-community": false,
+    "next-steps@claude-community": true,
     "blast-radius@claude-code-playground-mods": false,
-    "cc-plugin-you-should-know@builtin": false
+    "cc-plugin-you-should-know@builtin": false,
+    "peek@jv-mods": true
   },
   "extraKnownMarketplaces": {
     "37signals": {
@@ -81,7 +81,40 @@
     }
   },
   "alwaysThinkingEnabled": true,
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "xhigh"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-fable-5-1": {
+      "effortLevel": "xhigh"
+    },
+    "claude-haiku-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "pluginConfigs": {
+    "mods@jv-mods": {
+      "options": {
+        "alertSound": "Glass"
+      }
+    },
+    "flow@jv-mods": {
+      "options": {
+        "band": "full",
+        "autoOpen": false
+      }
+    },
+    "look@jv-mods": {
+      "options": {
+        "skinsAuto": false
+      }
+    }
+  },
   "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "switchModelsOnFlag": true,
   "inputNeededNotifEnabled": true,

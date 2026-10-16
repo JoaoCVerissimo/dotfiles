@@ -1,4 +1,0 @@
-{
-  "description": "Browser: a web page as text in a pane, with console errors and a color preview.",
-  "modules": ["./register.tsx"]
-}

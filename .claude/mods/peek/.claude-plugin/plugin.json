@@ -1,0 +1,26 @@
+{
+  "name": "peek",
+  "version": "0.2.0",
+  "description": "Draws a small preview of each image pasted into the prompt, above the prompt box, so you can see it is the right one before you send it. Open under a preview shows the picture itself in a small window. Plain code: it makes no model calls.",
+  "author": { "name": "João Veríssimo" },
+  "license": "MIT",
+  "keywords": ["images", "preview", "function-hooks"],
+  "types": "./types/index.d.ts",
+  "dependencies": ["mods"],
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Peek",
+      "description": "Preview the images pasted into the prompt.",
+      "required": false,
+      "default": false
+    },
+    "columns": {
+      "type": "number",
+      "title": "Preview width (columns)",
+      "description": "How wide a preview may be drawn, in terminal columns.",
+      "required": false,
+      "default": 36
+    }
+  }
+}

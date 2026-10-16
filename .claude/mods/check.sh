@@ -3,7 +3,7 @@
 #   .claude/mods/check.sh [mod ...]
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
-mods=("$@"); [[ ${#mods[@]} -eq 0 ]] && mods=(mods flow look keepwarm reflect browser)
+mods=("$@"); [[ ${#mods[@]} -eq 0 ]] && mods=(mods flow look keepwarm reflect peek)
 claude plugin validate . >/dev/null && echo "ok    marketplace"
 failed=0
 for mod in "${mods[@]}"; do

@@ -1,0 +1,4 @@
+{
+  "description": "Peek: a preview of each image pasted into the prompt, drawn above the prompt box.",
+  "modules": ["./register.tsx"]
+}
