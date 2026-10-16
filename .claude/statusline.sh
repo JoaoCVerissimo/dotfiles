@@ -10,6 +10,9 @@ COST=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
 DURATION_MS=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
 FIVE_H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 SEVEN_D=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+CACHE_WARM=$(echo "$input" | jq -r '.prompt_cache.warm // false')
+CACHE_TTL=$(echo "$input" | jq -r '.prompt_cache.ttl // empty')
+CACHE_EXP=$(echo "$input" | jq -r '.prompt_cache.expires_at // empty')
 
 # Token count (approximate from percentage)
 USED_TOKENS=$((PCT * CTX_SIZE / 100))
@@ -77,11 +80,45 @@ else
   REPO_LINK=""
 fi
 
+# Prompt cache window countdown (⚡ time left before the cached prefix expires)
+CACHE_SEG=""
+if [ -n "$CACHE_EXP" ] && [ "$CACHE_EXP" != "null" ]; then
+  CACHE_LEFT=$((CACHE_EXP - $(date +%s)))
+  if [ "$CACHE_WARM" = "true" ] && [ "$CACHE_LEFT" -gt 0 ]; then
+    if [ "$CACHE_LEFT" -ge 3600 ]; then
+      CACHE_TXT="$((CACHE_LEFT / 3600))h$(( (CACHE_LEFT % 3600) / 60 ))m"
+    elif [ "$CACHE_LEFT" -ge 60 ]; then
+      CACHE_TXT="$((CACHE_LEFT / 60))m"
+    else
+      CACHE_TXT="${CACHE_LEFT}s"
+    fi
+    if [ "$CACHE_LEFT" -le 300 ]; then CACHE_CLR="\033[31m"
+    elif [ "$CACHE_LEFT" -le 900 ]; then CACHE_CLR="\033[33m"
+    else CACHE_CLR="\033[32m"; fi
+    CACHE_SEG=" \033[2m|\033[0m \033[2m⚡\033[0m ${CACHE_CLR}${CACHE_TXT}\033[0m"
+    [ -n "$CACHE_TTL" ] && CACHE_SEG="${CACHE_SEG} \033[2m/${CACHE_TTL}\033[0m"
+  else
+    CACHE_SEG=" \033[2m|\033[0m \033[2m⚡ cold\033[0m"
+  fi
+fi
+
 # Duration
 MINS=$((DURATION_MS / 60000))
 SECS=$(((DURATION_MS % 60000) / 1000))
 
-printf '%b' "Model: ${MODEL} \033[2m|\033[0m ${BAR} ${PCT}% \033[2m[${TOKEN_DISPLAY}]\033[0m ${USAGE} \033[2m|\033[0m ${REPO_LINK} \033[2m(session)\033[0m ${MINS}m ${SECS}s\n"
+printf '%b' "Model: ${MODEL} \033[2m|\033[0m ${BAR} ${PCT}% \033[2m[${TOKEN_DISPLAY}]\033[0m ${USAGE} \033[2m|\033[0m ${REPO_LINK} \033[2m(session)\033[0m ${MINS}m ${SECS}s${CACHE_SEG}\n"
 
 # --- Line 3: slash commands ---
-printf '%b' "\033[2m/model\033[0m \033[36mmodel\033[0m \033[2m·\033[0m \033[2m/plan\033[0m \033[36mmode\033[0m \033[2m(shift+tab)\033[0m \033[2m·\033[0m \033[2m/effort\033[0m \033[36meffort\033[0m \033[2m(low|medium|high|max)\033[0m\n"
+
+# Effort levels, the one in force highlighted (a level not listed here is added at the end)
+EFFORT=$(echo "$input" | jq -r '.effort.level // empty')
+LEVELS="low medium high xhigh max"
+if [ -n "$EFFORT" ] && [[ " $LEVELS " != *" $EFFORT "* ]]; then LEVELS="$LEVELS $EFFORT"; fi
+EFFORT_SEG=""
+for level in $LEVELS; do
+  [ -n "$EFFORT_SEG" ] && EFFORT_SEG+="\033[2m|\033[0m"
+  if [ "$level" = "$EFFORT" ]; then EFFORT_SEG+="\033[1;32m${level}\033[0m"
+  else EFFORT_SEG+="\033[2m${level}\033[0m"; fi
+done
+
+printf '%b' "\033[2m/model\033[0m \033[36mmodel\033[0m \033[2m·\033[0m \033[2m/plan\033[0m \033[36mmode\033[0m \033[2m(shift+tab)\033[0m \033[2m·\033[0m \033[2m/effort\033[0m \033[36meffort\033[0m \033[2m(\033[0m${EFFORT_SEG}\033[2m)\033[0m\n"

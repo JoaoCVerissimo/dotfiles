@@ -1,0 +1,41 @@
+{
+  "name": "keepwarm",
+  "version": "0.1.0",
+  "description": "Keeps the session's prompt cache warm while you are away with one small request before it expires, for a set number of hours, and tells you when the cache has gone cold. Uses tokens: each ping is a model request that re-reads the conversation at the cached price.",
+  "author": { "name": "João Veríssimo" },
+  "license": "MIT",
+  "keywords": ["prompt-cache", "keep-warm", "cost", "function-hooks"],
+  "types": "./types/index.d.ts",
+  "dependencies": ["mods"],
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Keep warm",
+      "description": "After each turn, keep the prompt cache alive with a small request before it expires. Each one re-reads the whole context at the cache-read rate, so it costs usage while you are away.",
+      "required": false,
+      "default": false
+    },
+    "hours": {
+      "type": "number",
+      "title": "Hours to keep warm",
+      "description": "How long after your last turn the cache is kept warm before it is let go.",
+      "required": false,
+      "default": 2
+    },
+    "ttl": {
+      "type": "string",
+      "title": "Cache lifetime",
+      "description": "How long the session's cache lives without a request. auto reads your promptCacheTtl setting, else assumes one hour on a Claude subscription and five minutes otherwise.",
+      "required": false,
+      "default": "auto",
+      "options": ["auto", "1h", "5m"]
+    },
+    "coldNote": {
+      "type": "boolean",
+      "title": "Say when the cache is cold",
+      "description": "Show a line above the prompt once the cache has expired, with what the next turn will re-read.",
+      "required": false,
+      "default": true
+    }
+  }
+}

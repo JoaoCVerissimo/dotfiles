@@ -58,6 +58,9 @@ rustup default stable >/dev/null 2>&1 || rustup-init -y --no-modify-path
 step "Claude Code"
 command -v claude >/dev/null || curl -fsSL https://claude.ai/install.sh | bash
 
+step "Claude Code mods"
+PATH="$HOME/.local/bin:$PATH" "$DOTFILES/scripts/claude-mods.sh"
+
 step "Secrets hook for this repo"
 (cd "$DOTFILES" && pre-commit install) || true
 

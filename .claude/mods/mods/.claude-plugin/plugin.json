@@ -1,0 +1,47 @@
+{
+  "name": "mods",
+  "version": "0.1.0",
+  "description": "A panel that lists every mod with a switch for this session and one for all sessions, plus a control center (model, effort, stop), a session switcher and a done alert. Plain code: it makes no model calls of its own.",
+  "author": { "name": "João Veríssimo" },
+  "license": "MIT",
+  "keywords": ["mods", "panel", "control-center", "sessions", "notifications", "function-hooks"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "alert": {
+      "type": "boolean",
+      "title": "Done alert",
+      "description": "When a turn that took a while ends, play a sound and mark the session's terminal.",
+      "required": false,
+      "default": true
+    },
+    "alertSound": {
+      "type": "string",
+      "title": "Alert sound",
+      "description": "The macOS system sound played when a turn ends; none plays nothing.",
+      "required": false,
+      "default": "Glass",
+      "options": ["none", "Glass", "Ping", "Pop", "Hero", "Funk", "Purr", "Submarine", "Tink", "Bottle", "Frog", "Morse", "Blow", "Basso", "Sosumi"]
+    },
+    "alertNotify": {
+      "type": "boolean",
+      "title": "Mark the terminal",
+      "description": "When a turn ends, notify through the terminal itself: its own notification where it has one, else its bell, which marks the session's tab.",
+      "required": false,
+      "default": true
+    },
+    "alertAfterSeconds": {
+      "type": "number",
+      "title": "Alert after (seconds)",
+      "description": "Only alert when the turn took at least this many seconds.",
+      "required": false,
+      "default": 20
+    },
+    "chips": {
+      "type": "boolean",
+      "title": "Quick buttons",
+      "description": "Show the mods, control and sessions buttons on the hint line under the prompt.",
+      "required": false,
+      "default": true
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "description": "Look: Zen mode for the transcript, and a skin (a Claude Code theme) per project.",
+  "modules": ["./register.tsx"]
+}

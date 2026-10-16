@@ -1,0 +1,4 @@
+{
+  "description": "Keep warm: one small request before the prompt cache expires, for a set number of hours after your last turn.",
+  "modules": ["./register.tsx"]
+}

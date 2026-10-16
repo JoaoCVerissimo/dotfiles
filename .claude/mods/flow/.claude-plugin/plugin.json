@@ -1,0 +1,62 @@
+{
+  "name": "flow",
+  "version": "0.1.0",
+  "description": "Shows what Claude is doing: a progress bar and numbered task checklist above the prompt, and a pane with the subagents at work and the files they touch. Uses a few tokens: Claude posts its steps through a small tool (none with \"Ask Claude for its steps\" off).",
+  "author": {
+    "name": "João Veríssimo"
+  },
+  "license": "MIT",
+  "keywords": [
+    "progress",
+    "tasks",
+    "subagents",
+    "files",
+    "function-hooks"
+  ],
+  "types": "./types/index.d.ts",
+  "dependencies": [
+    "mods"
+  ],
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Flow",
+      "description": "Track turns, tasks, subagents and files, and draw the progress band.",
+      "required": false,
+      "default": false
+    },
+    "band": {
+      "type": "string",
+      "title": "Band",
+      "description": "What the band above the prompt shows while Claude works: full lists the tasks, compact keeps to one row, off draws nothing.",
+      "required": false,
+      "default": "full",
+      "options": [
+        "full",
+        "compact",
+        "off"
+      ]
+    },
+    "maxTasks": {
+      "type": "number",
+      "title": "Tasks shown",
+      "description": "How many task rows the full band lists at once.",
+      "required": false,
+      "default": 6
+    },
+    "steps": {
+      "type": "boolean",
+      "title": "Ask Claude for its steps",
+      "description": "Give Claude a small tool to post its plan as steps, so the band has a progress bar even when it keeps no task list. Adds one tool and one sentence to the system prompt.",
+      "required": false,
+      "default": true
+    },
+    "autoOpen": {
+      "type": "boolean",
+      "title": "Open the pane for subagents",
+      "description": "Open the Flow pane by itself when a subagent starts (on a wide terminal).",
+      "required": false,
+      "default": false
+    }
+  }
+}

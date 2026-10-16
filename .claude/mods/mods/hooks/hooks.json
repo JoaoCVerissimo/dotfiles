@@ -1,0 +1,4 @@
+{
+  "description": "Mods: the panel that switches the other mods on and off, a control center, a session switcher and a done alert.",
+  "modules": ["./register.tsx"]
+}

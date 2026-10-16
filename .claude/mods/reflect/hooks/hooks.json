@@ -1,0 +1,4 @@
+{
+  "description": "Reflect: turns your corrections into rules you can save for the project or for every project.",
+  "modules": ["./register.tsx"]
+}

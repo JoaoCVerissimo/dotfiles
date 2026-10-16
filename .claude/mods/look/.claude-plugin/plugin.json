@@ -1,0 +1,40 @@
+{
+  "name": "look",
+  "version": "0.1.0",
+  "description": "Zen mode hides tool noise while Claude works, and skins give each project its own color palette through a Claude Code theme of its own. Plain code: no model calls.",
+  "author": { "name": "João Veríssimo" },
+  "license": "MIT",
+  "keywords": ["zen", "themes", "skins", "function-hooks"],
+  "types": "./types/index.d.ts",
+  "dependencies": ["mods"],
+  "userConfig": {
+    "zen": {
+      "type": "boolean",
+      "title": "Zen",
+      "description": "Hide tool calls and their output in the transcript; prompts, answers and the progress band stay.",
+      "required": false,
+      "default": false
+    },
+    "zenErrors": {
+      "type": "boolean",
+      "title": "Zen keeps failures",
+      "description": "Under Zen, still show a tool call that failed.",
+      "required": false,
+      "default": true
+    },
+    "skins": {
+      "type": "boolean",
+      "title": "Skins",
+      "description": "Pick a color skin for a project with /skin. A project keeps its skin; switching this off in a session turns it plain.",
+      "required": false,
+      "default": false
+    },
+    "skinsAuto": {
+      "type": "boolean",
+      "title": "Skins for new projects",
+      "description": "The first time a session starts in a project, give it a skin picked from its name. It writes a theme line to the project's .claude/settings.local.json.",
+      "required": false,
+      "default": false
+    }
+  }
+}
